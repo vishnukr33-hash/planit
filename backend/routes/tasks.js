@@ -61,7 +61,7 @@ router.get('/:id', protect, async (req, res) => {
 // Create task
 router.post('/', protect, async (req, res) => {
   try {
-    const { isTeamTask, assignedTo, ...body } = req.body;
+        const { isTeamTask, assignedTo, ...body } = req.body;
     const taskData = {
       ...body,
       assignedBy: req.user._id,
@@ -78,6 +78,7 @@ router.post('/', protect, async (req, res) => {
     // Send WhatsApp + Email notification on assignment (only if assigned to someone else)
     if (task.assignedTo._id.toString() !== req.user._id.toString()) {
       const dueStr = task.dueDate ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'No due date'
+
 
       // WhatsApp
       if (task.assignedTo.phone) {
