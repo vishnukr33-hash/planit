@@ -61,8 +61,6 @@ router.get('/:id', protect, async (req, res) => {
 // Create task
 router.post('/', protect, async (req, res) => {
   try {
-    router.post('/', protect, async (req, res) => {
-  try {
     const { isTeamTask, assignedTo, ...body } = req.body;
 
     const taskData = {
@@ -82,6 +80,7 @@ router.post('/', protect, async (req, res) => {
 
     res.status(201).json(task);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: err.message });
   }
 });
