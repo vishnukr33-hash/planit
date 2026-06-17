@@ -58,19 +58,16 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.title.trim()) return toast.error('Title is required')
-    const payload: any = {
-  ...form,
-  assignedTo: form.assignedTo || undefined
-}
+    const payload: any = { ...form }
     if (form.dueDate) {
       payload.dueDate = new Date(`${form.dueDate}T${form.dueTime || '09:00'}`).toISOString()
     }
     delete payload.dueTime
-    console.log('VISHNU TEST 123', payload)
-
-mutation.mutate(payload)
+    delete payload.isTeamTask
+    // Don't send empty assignedTo — let backend default to self
+    if (!payload.assignedTo) delete payload.assignedTo
+    mutation.mutate(payload)
   }
-
   // Status options: admin gets all, team members only get progress statuses
   const statusOptions = isAdmin
     ? Array.from(STATUSES)
