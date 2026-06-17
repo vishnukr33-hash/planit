@@ -26,10 +26,11 @@ const taskSchema = new mongoose.Schema({
   dueDate: { type: Date },
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  isTeamTask: { type: Boolean, default: false },
+  isTeamTask: { type: Boolean, default: false, set: function(v) { return v === '' || v === null || v === undefined ? false : Boolean(v); } },
   comments: [commentSchema],
   attachments: [{ name: String, url: String }],
   completedAt: { type: Date },
+
   reminderSent: { type: Boolean, default: false },
   hourReminderSent: { type: Boolean, default: false },
   // Once a team member submits Done, only admin can edit
