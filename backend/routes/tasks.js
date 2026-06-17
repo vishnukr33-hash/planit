@@ -62,29 +62,12 @@ router.get('/:id', protect, async (req, res) => {
 router.post('/', protect, async (req, res) => {
   try {
     const { isTeamTask, assignedTo, ...body } = req.body;
-
     const taskData = {
       ...body,
       assignedBy: req.user._id,
       assignedTo: assignedTo || req.user._id,
-      isTeamTask:
-        req.user.role === 'admin' &&
-        assignedTo &&
-        assignedTo !== req.user._id.toString()
+      isTeamTask: req.user.role === 'admin' && assignedTo && assignedTo !== req.user._id.toString()
     };
-
-    const task = await Task.create(taskData);
-
-    await task.populate('assignedTo', 'name username employeeCode phone email');
-    await task.populate('assignedBy', 'name username');
-
-    res.status(201).json(task);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: err.message });
-  }
-});
-    if (!taskData.assignedTo) taskData.assignedTo = req.user._id;
 
     const task = await Task.create(taskData);
     await task.populate('assignedTo', 'name username employeeCode phone email');
