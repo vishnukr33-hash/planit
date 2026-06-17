@@ -1,33 +1,50 @@
 const nodemailer = require('nodemailer');
-const { getEmailConfig } = require('./settings');
 
-function createTransporter() {
-  const config = getEmailConfig();
-  if (!config.user || !config.pass) return null;
-  return nodemailer.createTransport({
-    host: config.host,
-    port: config.port,
-    secure: false,
-    auth: { user: config.user, pass: config.pass }
-  });
+let settingsCache = null;
+function getConfig() {
+  // Try settings.json first (for local/admin UI updates)
+  if (!settingsCache) {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const file = path.join(__dirname, '..', 'settings.json');
+      if (fs.existsSync(file)) {
+        settingsCache = JSON.parse(fs.readFileSync(file, 'utf8'));
+      }
+    } catch (e) {}
+  }
+  return {
+    host: settingsCache?.emailHost || process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: Number(settingsCache?.emailPort || process.env.EMAIL_PORT || 587),
+    user: settingsCache?.emailUser || process.env.EMAIL_USER || '',
+    pass: settingsCache?.emailPass || process.env.EMAIL_PASS || '',
+  };
 }
 
 exports.sendEmail = async ({ to, subject, html }) => {
-  const config = getEmailConfig();
+  const config = getConfig();
   if (!config.user || !config.pass) {
-    console.log('[Email] Skipped — no SMTP credentials configured. To:', to, 'Subject:', subject);
+    console.log('[Email] Skipped — no credentials. To:', to);
     return;
   }
   try {
-    const transporter = createTransporter();
+    const transporter = nodemailer.createTransport({
+      host: config.host,
+      port: config.port,
+      secure: false,
+      auth: { user: config.user, pass: config.pass },
+    });
     await transporter.sendMail({
       from: `"Planit" <${config.user}>`,
       to,
       subject,
-      html
+      html,
     });
     console.log(`[Email] Sent to ${to}: ${subject}`);
   } catch (err) {
     console.error(`[Email] FAILED to ${to}:`, err.message);
   }
 };
+
+// Allow clearing cache when admin updates settings
+exports.clearEmailCache = () => { settingsCache = null; };
