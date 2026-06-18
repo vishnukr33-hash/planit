@@ -66,12 +66,15 @@ exports.sendEmail = async ({ to, subject, html }) => {
   if (config.resendKey) {
     try {
       await sendViaResend(config, { to, subject, html });
-      console.log(`[Email-Resend] Sent to ${to}: ${subject}`);
-      return;
-    } catch (err) {
-      console.error(`[Email-Resend] FAILED to ${to}:`, err.response?.data || err.message);
-    }
-  }
+      console.log(
+  `[Email] Config check — resendKey: ${
+    config.resendKey ? 'SET' : 'NOT SET'
+  } | user: ${
+    config.user ? 'SET' : 'NOT SET'
+  } | pass: ${
+    config.pass ? 'SET' : 'NOT SET'
+  }`
+);
 
   // Fallback to SMTP (works locally, may not work on Render free tier)
   if (config.user && config.pass) {
