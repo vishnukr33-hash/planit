@@ -30,9 +30,11 @@ exports.sendEmail = async ({ to, subject, html }) => {
   try {
     const transporter = nodemailer.createTransport({
       host: config.host,
-      port: config.port,
-      secure: false,
+      port: 465,
+      secure: true,
       auth: { user: config.user, pass: config.pass },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
     });
     await transporter.sendMail({
       from: `"Planit" <${config.user}>`,
