@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const Task = require('../models/Task');
 const { sendEmail } = require('./email');
-const { notifyReminder } = require('./whatsapp');
+const { notifyTaskPending, notifyTaskLate } = require('./whatsapp');
 
 // Keep Atlas alive - ping every 4 minutes
 cron.schedule('*/4 * * * *', async () => {
@@ -30,9 +30,9 @@ cron.schedule('0 9 * * *', async () => {
       if (!task.assignedTo) continue;
       const dueStr = new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
 
-      // WhatsApp
+      // WhatsApp — template: task_pending
       if (task.assignedTo.phone) {
-        await notifyReminder(task.assignedTo, task, 'due tomorrow').catch(() => {});
+        await notifyTaskPending(task.assignedTo, task).catch(() => {});
       }
 
       // Email
@@ -78,9 +78,9 @@ cron.schedule('*/5 * * * *', async () => {
       if (!task.assignedTo) continue;
       const dueTime = new Date(task.dueDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-      // WhatsApp
+      // WhatsApp — template: task_late
       if (task.assignedTo.phone) {
-        await notifyReminder(task.assignedTo, task, `due in 1 hour at ${dueTime}`).catch(() => {});
+        await notifyTaskLate(task.assignedTo, task).catch(() => {});
       }
 
       // Email
