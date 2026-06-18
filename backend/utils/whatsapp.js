@@ -1,7 +1,11 @@
 /**
  * WhatsApp messaging via Interakt API
- * Uses both Text messages (for 24hr window) and Template messages
- * API Key: passed as-is in Authorization header (not base64)
+ * Uses approved templates for outbound notifications
+ * 
+ * Templates:
+ * 1. new_task (ID: 28160587806875627) — when admin assigns a task
+ * 2. task_pending (ID: 1057554603269663) — N-1 day reminder at 9 AM
+ * 3. task_late (ID: 2056861468282029) — N-1 hour before due time
  */
 const axios = require('axios');
 
@@ -9,53 +13,28 @@ const API_KEY = process.env.WHATSAPP_API_KEY || 'sk_9548d4db0d704872bee3367ac0dd
 const BASE_URL = 'https://api.interakt.ai/v1/public/message/';
 
 /**
- * Send a plain text WhatsApp message
+ * Send a WhatsApp template message
+ * @param {string} phone - with country code e.g. "919876543210"
+ * @param {string} templateName - approved template name
+ * @param {string[]} bodyValues - ordered placeholder values
  */
-async function sendWhatsAppText(phone, message) {
+async function sendWhatsAppTemplate(phone, templateName, bodyValues = []) {
   if (!phone) return;
   const normalized = phone.replace(/[\s\-\+]/g, '');
-  if (normalized.length < 10) return;
-
-  const payload = {
-    countryCode: '+91',
-    phoneNumber: normalized,
-    callbackData: 'planit_notification',
-    type: 'Text',
-    data: { message },
-  };
-
-  try {
-    const res = await axios.post(BASE_URL, payload, {
-      headers: {
-        Authorization: `Basic ${API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 10000,
-    });
-    console.log(`[WhatsApp-Text] Sent to ${normalized}:`, res.data?.result || 'OK');
-    return res.data;
-  } catch (err) {
-    console.error(`[WhatsApp-Text] FAILED to ${normalized}:`, err.response?.data || err.message);
-    // If text fails (24hr window expired), try template
-    return sendWhatsAppTemplate(normalized, message);
+  if (normalized.length < 10) {
+    console.warn('[WhatsApp] Invalid phone:', phone);
+    return;
   }
-}
 
-/**
- * Send a template message (fallback for outside 24hr window)
- * Uses 'hello_world' default template or custom if available
- */
-async function sendWhatsAppTemplate(phone, message) {
-  const normalized = phone.replace(/[\s\-\+]/g, '');
   const payload = {
     countryCode: '+91',
     phoneNumber: normalized,
     callbackData: 'planit_notification',
     type: 'Template',
     template: {
-      name: 'hello_world',
-      languageCode: 'en_US',
-      bodyValues: [],
+      name: templateName,
+      languageCode: 'en',
+      bodyValues: bodyValues.map(String),
     },
   };
 
@@ -67,46 +46,96 @@ async function sendWhatsAppTemplate(phone, message) {
       },
       timeout: 10000,
     });
-    console.log(`[WhatsApp-Template] Sent to ${normalized}:`, res.data?.result || 'OK');
+    console.log(`[WhatsApp] Sent [${templateName}] to ${normalized}:`, res.data?.result || 'OK');
     return res.data;
   } catch (err) {
-    console.error(`[WhatsApp-Template] FAILED to ${normalized}:`, err.response?.data || err.message);
+    console.error(`[WhatsApp] FAILED [${templateName}] to ${normalized}:`, err.response?.data || err.message);
   }
 }
 
 /**
- * Notify user about a newly assigned task
+ * Template: new_task
+ * Sent when admin assigns a new task to a team member
  */
 async function notifyTaskAssigned(user, task, assignedByName) {
-  const dueStr = task.dueDate ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'No due date';
-  const portalUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-  const msg = `📋 *New Task Assigned*\n\nHi ${user.name},\n\nA new task has been assigned to you.\n\n*Task:* ${task.title}\n*Priority:* ${task.priority}\n*Due:* ${dueStr}\n*Assigned by:* ${assignedByName}\n\nPlease login to accept: ${portalUrl}`;
-  return sendWhatsAppText(user.phone, msg);
+  const dueStr = task.dueDate
+    ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+    : 'No due date';
+  return sendWhatsAppTemplate(user.phone, 'new_task', [
+    user.name,
+    task.title,
+    task.priority,
+    dueStr,
+    assignedByName,
+  ]);
 }
 
 /**
- * Notify user about a task status update
+ * Template: task_pending
+ * Sent N-1 day before due date at 9:00 AM
+ */
+async function notifyTaskPending(user, task) {
+  const dueStr = task.dueDate
+    ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+    : 'N/A';
+  return sendWhatsAppTemplate(user.phone, 'task_pending', [
+    user.name,
+    task.title,
+    dueStr,
+    task.status,
+    task.priority,
+  ]);
+}
+
+/**
+ * Template: task_late
+ * Sent N-1 hour before task due time
+ */
+async function notifyTaskLate(user, task) {
+  const dueTime = task.dueDate
+    ? new Date(task.dueDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    : 'N/A';
+  return sendWhatsAppTemplate(user.phone, 'task_late', [
+    user.name,
+    task.title,
+    dueTime,
+    task.status,
+    task.priority,
+  ]);
+}
+
+/**
+ * Generic reminder (backward compat)
+ */
+async function notifyReminder(user, task, reminderType) {
+  if (reminderType === 'due tomorrow') {
+    return notifyTaskPending(user, task);
+  } else if (reminderType && reminderType.includes('hour')) {
+    return notifyTaskLate(user, task);
+  }
+  return notifyTaskPending(user, task);
+}
+
+/**
+ * Status update notification (uses new_task template as fallback)
  */
 async function notifyStatusUpdate(user, task, updatedByName) {
-  const msg = `🔄 *Task Status Updated*\n\nHi ${user.name},\n\n*Task:* ${task.title}\n*New Status:* ${task.status}\n*Updated by:* ${updatedByName}`;
-  return sendWhatsAppText(user.phone, msg);
+  return sendWhatsAppTemplate(user.phone, 'new_task', [
+    user.name,
+    task.title + ' — Status: ' + task.status,
+    task.priority,
+    task.dueDate ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A',
+    updatedByName,
+  ]);
 }
 
 /**
- * Send due-date reminder
- */
-async function notifyReminder(user, task, reminderType = 'due today') {
-  const dueStr = task.dueDate ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A';
-  const portalUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-  const msg = `⏰ *Task Reminder*\n\nHi ${user.name},\n\nYour task *${task.title}* is *${reminderType}*.\n\n*Due:* ${dueStr}\n*Status:* ${task.status}\n*Priority:* ${task.priority}\n\nUpdate status: ${portalUrl}`;
-  return sendWhatsAppText(user.phone, msg);
-}
-
-/**
- * Test WhatsApp connection
+ * Test WhatsApp
  */
 async function testWhatsApp(phone) {
-  return sendWhatsAppText(phone, '✅ Planit WhatsApp test message. If you see this, notifications are working!');
+  return sendWhatsAppTemplate(phone, 'new_task', [
+    'Test User', 'Test Task', 'High', new Date().toLocaleString('en-IN'), 'Admin',
+  ]);
 }
 
-module.exports = { sendWhatsAppText, sendWhatsAppTemplate, notifyTaskAssigned, notifyStatusUpdate, notifyReminder, testWhatsApp };
+module.exports = { sendWhatsAppTemplate, notifyTaskAssigned, notifyTaskPending, notifyTaskLate, notifyReminder, notifyStatusUpdate, testWhatsApp };
