@@ -28,7 +28,7 @@ function getConfig() {
  */
 async function sendViaResend(config, { to, subject, html }) {
   const res = await axios.post('https://api.resend.com/emails', {
-    from: 'Planit <onboarding@resend.dev>',
+    from: 'Planit <noreply@yourdomain.com>'
     to: [to],
     subject,
     html,
