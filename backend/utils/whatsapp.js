@@ -38,6 +38,8 @@ async function sendWhatsAppTemplate(phone, templateName, bodyValues = []) {
     },
   };
 
+  console.log(`[WhatsApp] Sending [${templateName}] to ${normalized}, key: ${API_KEY.substring(0,8)}...`);
+
   try {
     const res = await axios.post(BASE_URL, payload, {
       headers: {
