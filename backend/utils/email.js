@@ -2,7 +2,6 @@ const nodemailer = require('nodemailer');
 
 let settingsCache = null;
 function getConfig() {
-  // Try settings.json first (for local/admin UI updates)
   if (!settingsCache) {
     try {
       const fs = require('fs');
@@ -15,7 +14,7 @@ function getConfig() {
   }
   return {
     host: settingsCache?.emailHost || process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: Number(settingsCache?.emailPort || process.env.EMAIL_PORT || 587),
+    port: Number(settingsCache?.emailPort || process.env.EMAIL_PORT || 465),
     user: settingsCache?.emailUser || process.env.EMAIL_USER || '',
     pass: settingsCache?.emailPass || process.env.EMAIL_PASS || '',
   };
@@ -48,5 +47,4 @@ exports.sendEmail = async ({ to, subject, html }) => {
   }
 };
 
-// Allow clearing cache when admin updates settings
 exports.clearEmailCache = () => { settingsCache = null; };
