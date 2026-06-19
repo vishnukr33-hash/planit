@@ -18,6 +18,9 @@ app.use(express.json());
 // Attach io to req
 app.use((req, _res, next) => { req.io = io; next(); });
 
+// Health check endpoint (keep alive for cron jobs)
+app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
