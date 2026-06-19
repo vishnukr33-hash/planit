@@ -135,9 +135,13 @@
               {/* Status — team members see only In Progress / Need Discussion / Done / Delayed */}
               <div>
                 <label className="label">Status</label>
-                <select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                  {statusOptions.map(s => <option key={s}>{s}</option>)}
-                </select>
+                {isEdit ? (
+                  <select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                    {statusOptions.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                ) : (
+                  <input className="input bg-slate-50 dark:bg-slate-700/50" value="Pending" readOnly />
+                )}
               </div>
               {/* Priority */}
               <div>
