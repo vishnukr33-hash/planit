@@ -58,20 +58,24 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.title.trim()) return toast.error('Title is required')
+    if (!form.dueDate) return toast.error('Due Date is required')
+    if (!form.dueTime) return toast.error('Due Time is required')
     const payload: any = { ...form }
     if (form.dueDate) {
       payload.dueDate = new Date(`${form.dueDate}T${form.dueTime || '09:00'}`).toISOString()
     }
     delete payload.dueTime
     delete payload.isTeamTask
-    // Don't send empty assignedTo — let backend default to self
     if (!payload.assignedTo) delete payload.assignedTo
     mutation.mutate(payload)
   }
-  // Status options: admin gets all, team members only get progress statuses
-  const statusOptions = isAdmin
-    ? Array.from(STATUSES)
-    : ['In Progress', 'Need Discussion', 'Done', 'Delayed']
+
+  // Status options: creating new task = Pending only; editing = full list for admin, limited for user
+  const statusOptions = !isEdit
+    ? ['Pending']
+    : isAdmin
+      ? Array.from(STATUSES)
+      : ['In Progress', 'Need Discussion', 'Done', 'Delayed']
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in">
@@ -144,13 +148,14 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
             </div>
             {/* Due Date */}
             <div>
-              <label className="label">Due Date {!canEditAllFields && <span className="text-slate-400 font-normal text-xs">(read-only)</span>}</label>
+              <label className="label">Due Date * {!canEditAllFields && <span className="text-slate-400 font-normal text-xs">(read-only)</span>}</label>
               <input
                 type="date"
                 className={clsx('input', !canEditAllFields && 'bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed')}
                 value={form.dueDate}
                 onChange={e => canEditAllFields ? setForm(f => ({ ...f, dueDate: e.target.value })) : undefined}
                 readOnly={!canEditAllFields}
+                required
               />
             </div>
           </div>
@@ -158,9 +163,10 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
           {/* Due Time — only when user can edit */}
           {canEditAllFields && (
             <div>
-              <label className="label">Due Time</label>
+              <label className="label">Due Time *</label>
               <input type="time" className="input" value={form.dueTime}
-                onChange={e => setForm(f => ({ ...f, dueTime: e.target.value }))} />
+                onChange={e => setForm(f => ({ ...f, dueTime: e.target.value }))}
+                required />
             </div>
           )}
 
