@@ -92,10 +92,10 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
 
   // Status options: creating new task = Pending only; editing = full list for admin, limited for user
   const statusOptions = !isEdit
-    ? ['Pending']
-    : isAdmin
-      ? Array.from(STATUSES)
-      : ['In Progress', 'Need Discussion', 'Done', 'Delayed']
+  ? ['Pending']
+  : isAdmin
+    ? Array.from(STATUSES)
+    : ['In Progress', 'Need Discussion', 'Done', 'Delayed']
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in">
