@@ -56,19 +56,37 @@
     })
 
     const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault()
-      if (!form.title.trim()) return toast.error('Title is required')
-      if (!form.dueDate) return toast.error('Due Date is required')
-      if (!form.dueTime) return toast.error('Due Time is required')
-      const payload: any = { ...form }
-      if (form.dueDate) {
-        payload.dueDate = new Date(`${form.dueDate}T${form.dueTime || '09:00'}`).toISOString()
-      }
-      delete payload.dueTime
-      delete payload.isTeamTask
-      if (!payload.assignedTo) delete payload.assignedTo
-      mutation.mutate(payload)
-    }
+  e.preventDefault()
+
+  if (!form.title.trim()) {
+    return toast.error('Title is required')
+  }
+
+  if (!form.dueDate) {
+    return toast.error('Due Date is required')
+  }
+
+  if (!form.dueTime) {
+    return toast.error('Due Time is required')
+  }
+
+  const payload: any = {
+    title: form.title,
+    description: form.description,
+    status: form.status,
+    category: form.category,
+    priority: form.priority,
+    dueDate: new Date(`${form.dueDate}T${form.dueTime}`).toISOString(),
+  }
+
+  if (form.assignedTo) {
+    payload.assignedTo = form.assignedTo
+  }
+
+  console.log('TASK PAYLOAD:', payload)
+
+  mutation.mutate(payload)
+}
 
     // Status options: creating new task = Pending only; editing = full list for admin, limited for user
     const statusOptions = !isEdit
