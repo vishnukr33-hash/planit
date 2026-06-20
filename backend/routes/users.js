@@ -108,7 +108,11 @@ router.post('/', protect, async (req, res) => {
 // Update user
 router.put('/:id', protect, async (req, res) => {
   try {
-    const { password, role, ...rest } = req.body;
+    const { password, ...rest } = req.body;
+    // Only admin can change roles
+    if (rest.role && req.user.role !== 'admin') {
+      delete rest.role;
+    }
     const user = await User.findByIdAndUpdate(req.params.id, rest, { new: true, runValidators: true });
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
