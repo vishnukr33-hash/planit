@@ -53,15 +53,15 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-// Get all subordinates recursively (for task assignment dropdown)
+// Get all subordinates (for task assignment dropdown)
 router.get('/subordinates', protect, async (req, res) => {
   try {
     if (req.user.role === 'user') return res.json({ users: [] });
 
     let users = [];
     if (req.user.role === 'admin') {
-      // Admin can assign to heads
-      users = await User.find({ role: 'head', status: 'active' }).select('name employeeCode role');
+      // Admin can assign to any non-admin user
+      users = await User.find({ role: { $ne: 'admin' }, status: 'active' }).select('name employeeCode role');
     } else if (req.user.role === 'head') {
       // Head can assign to their teamleads
       users = await User.find({ parentId: req.user._id, status: 'active' }).select('name employeeCode role');
