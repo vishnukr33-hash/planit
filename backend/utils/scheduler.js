@@ -111,3 +111,18 @@ cron.schedule('*/5 * * * *', async () => {
 cron.schedule('0 0 * * *', async () => {
   await Task.updateMany({ hourReminderSent: true }, { hourReminderSent: false });
 });
+
+
+// Auto-purge deleted tasks older than 6 months — runs daily at 2 AM
+cron.schedule('0 2 * * *', async () => {
+  try {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const result = await Task.deleteMany({ isDeleted: true, deletedAt: { $lt: sixMonthsAgo } });
+    if (result.deletedCount > 0) {
+      console.log(`[Scheduler] Auto-purged ${result.deletedCount} tasks from trash (older than 6 months)`);
+    }
+  } catch (err) {
+    console.error('Scheduler error (auto-purge):', err);
+  }
+});

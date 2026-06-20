@@ -21,7 +21,7 @@ async function getSubordinateIds(userId) {
 router.get('/', protect, async (req, res) => {
   try {
     const { status, category, priority, isTeamTask, assignedTo, search, filter, page = 1, limit = 50 } = req.query;
-    const query = {};
+    const query = { isDeleted: { $ne: true } };
 
     if (req.user.role === 'admin') {
       // Admin sees ALL tasks in the hierarchy
@@ -240,16 +240,84 @@ router.patch('/:id/accept', protect, async (req, res) => {
   }
 });
 
-// Delete task — admin only
+// Delete task — soft delete (move to trash)
 router.delete('/:id', protect, async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: 'Task not found' });
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Only admin can delete tasks' });
+    if (req.user.role !== 'admin' && req.user.role !== 'head' && req.user.role !== 'teamlead') {
+      return res.status(403).json({ message: 'Not authorized to delete tasks' });
     }
-    await task.deleteOne();
-    res.json({ message: 'Task deleted' });
+    task.isDeleted = true;
+    task.deletedAt = new Date();
+    await task.save();
+    res.json({ message: 'Task moved to trash' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Get deleted tasks (trash)
+router.get('/trash/list', protect, async (req, res) => {
+  try {
+    const query = { isDeleted: true };
+    if (req.user.role !== 'admin') {
+      query.assignedBy = req.user._id;
+    }
+    const tasks = await Task.find(query)
+      .populate('assignedTo', 'name username employeeCode')
+      .populate('assignedBy', 'name username')
+      .sort({ deletedAt: -1 });
+    res.json({ tasks, total: tasks.length });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Permanently delete task from trash
+router.delete('/:id/permanent', protect, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+    await Task.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Task permanently deleted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Restore task from trash
+router.patch('/:id/restore', protect, async (req, res) => {
+  try {
+    const task = await Task.findByIdAndUpdate(req.params.id, { isDeleted: false, deletedAt: null }, { new: true });
+    res.json(task);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Export tasks to CSV (Excel-compatible)
+router.get('/export/excel', protect, async (req, res) => {
+  try {
+    const query = { isDeleted: { $ne: true } };
+    if (req.user.role !== 'admin') {
+      query.$or = [{ assignedTo: req.user._id }, { assignedBy: req.user._id }];
+    }
+    const tasks = await Task.find(query)
+      .populate('assignedTo', 'name employeeCode')
+      .populate('assignedBy', 'name')
+      .sort({ createdAt: -1 });
+
+    // Generate CSV
+    const headers = 'Title,Description,Status,Category,Priority,Due Date,Assigned To,Assigned By,Created At\n';
+    const rows = tasks.map(t => {
+      const due = t.dueDate ? new Date(t.dueDate).toLocaleString('en-IN') : '';
+      const created = new Date(t.createdAt).toLocaleString('en-IN');
+      return `"${(t.title || '').replace(/"/g, '""')}","${(t.description || '').replace(/"/g, '""')}","${t.status}","${t.category}","${t.priority}","${due}","${t.assignedTo?.name || ''}","${t.assignedBy?.name || ''}","${created}"`;
+    }).join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=planit-tasks.csv');
+    res.send(headers + rows);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -9,6 +9,7 @@ const navItems = [
   { href: '/dashboard/my-tasks', label: 'My Tasks', icon: '✓' },
   { href: '/dashboard/team-tasks', label: 'Team Tasks', icon: '👥' },
   { href: '/dashboard/reminders', label: 'Reminders', icon: '🔔' },
+  { href: '/dashboard/deleted', label: 'Deleted', icon: '🗑️' },
   { href: '/dashboard/users', label: 'Add User', icon: '➕', roles: ['admin', 'head', 'teamlead'] },
 ]
 

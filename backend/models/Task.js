@@ -33,6 +33,9 @@ const taskSchema = new mongoose.Schema({
 
   reminderSent: { type: Boolean, default: false },
   hourReminderSent: { type: Boolean, default: false },
+  // Soft delete
+  isDeleted: { type: Boolean, default: false },
+  deletedAt: { type: Date, default: null },
   // Once a team member submits Done, only admin can edit
   lockedByDone: { type: Boolean, default: false },
 }, { timestamps: true });
