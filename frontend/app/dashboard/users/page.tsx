@@ -12,7 +12,7 @@ interface UserForm {
   employeeCode: string; name: string; email: string; username: string; password: string; phone: string; role: string; status: string
 }
 
-const emptyForm: UserForm = { employeeCode: '', name: '', email: '', username: '', password: '', phone: '', role: 'user', status: 'active' }
+const emptyForm: UserForm = { employeeCode: '', name: '', email: '', username: '', password: '', phone: '', role: '', status: 'active' }
 
 export default function UsersPage() {
   const { user } = useAuthStore()
@@ -61,7 +61,7 @@ export default function UsersPage() {
   })
 
   const openEdit = (u: any) => { setEditUser(u); setForm({ employeeCode: u.employeeCode, name: u.name, email: u.email, username: u.username, password: '', phone: u.phone || '', role: u.role || 'user', status: u.status }); setShowModal(true) }
-  const closeModal = () => { setShowModal(false); setEditUser(null); setForm(emptyForm) }
+  const closeModal = () => { setShowModal(false); setEditUser(null); setForm({ ...emptyForm, role: allowedRoles[0] || 'user' }) }
 
   return (
     <DashboardLayout title="User Management">
@@ -71,7 +71,7 @@ export default function UsersPage() {
           <input className="input max-w-xs text-sm" placeholder="🔍 Search users..."
             value={search} onChange={e => setSearch(e.target.value)} />
           <div className="flex-1" />
-          <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
+          <button onClick={() => { setForm({ ...emptyForm, role: allowedRoles[0] || 'user' }); setShowModal(true) }} className="btn-primary flex items-center gap-2">
             <span>+</span> Add User
           </button>
         </div>
