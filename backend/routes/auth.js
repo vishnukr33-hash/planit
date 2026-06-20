@@ -26,6 +26,15 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Clear all tasks (admin only) — DELETE /api/auth/clear-tasks
+router.delete('/clear-tasks', protect, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  const Task = require('../models/Task');
+  const result = await Task.deleteMany({});
+  console.log('[Admin] Cleared all tasks:', result.deletedCount);
+  res.json({ message: `Deleted ${result.deletedCount} tasks` });
+});
+
 // Get current user
 router.get('/me', protect, (req, res) => res.json(req.user));
 
