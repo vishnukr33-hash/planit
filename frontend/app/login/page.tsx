@@ -84,9 +84,6 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-blue-200 text-sm mt-6">
-          Admin Login: <span className="font-mono bg-white/10 px-2 py-0.5 rounded">admin / Admin@2026</span>
-        </p>
       </div>
     </div>
   )
