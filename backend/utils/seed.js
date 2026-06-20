@@ -1,6 +1,6 @@
 /**
  * Run: node utils/seed.js
- * Seeds admin user and sample data
+ * Seeds users with hierarchy: Admin → Head → Team Lead → Users
  */
 require('dotenv').config();
 const mongoose = require('mongoose');
@@ -14,34 +14,46 @@ async function seed() {
   await User.deleteMany({});
   await Task.deleteMany({});
 
+  // Admin
   const admin = await User.create({
-    employeeCode: 'ADM001',
-    name: 'Admin',
-    email: 'admin@company.com',
-    username: 'admin',
-    password: 'Admin@2026',
-    role: 'admin',
-    status: 'active'
+    employeeCode: 'ADM001', name: 'Admin', email: 'admin@company.com',
+    username: 'admin', password: 'Admin@2026', role: 'admin', status: 'active'
   });
 
-  const users = await User.insertMany([
-    { employeeCode: '28708', name: 'Vishnu K R', email: 'vishnu@company.com', username: 'VishnuRavi', password: 'Years@2027', role: 'user', status: 'active' },
-    { employeeCode: '36368', name: 'Kishore', email: 'kishore@company.com', username: 'Kishore', password: 'Year@2026', role: 'user', status: 'active' },
-    { employeeCode: '66512', name: 'Sachin', email: 'sachin@company.com', username: 'Sachin', password: 'Year@2006', role: 'user', status: 'inactive' },
-    { employeeCode: 'U004', name: 'Abhi', email: 'abhi@company.com', username: 'Abhi', password: 'Pass@2026', role: 'user', status: 'active' },
-    { employeeCode: 'U005', name: 'Arun', email: 'arun@company.com', username: 'Arun', password: 'Pass@2026', role: 'user', status: 'active' },
-  ]);
+  // Head (reports to admin)
+  const head = await User.create({
+    employeeCode: '28708', name: 'Vishnu K R', email: 'vishnu@company.com',
+    username: 'VishnuRavi', password: 'Years@2027', role: 'head', parentId: admin._id, status: 'active'
+  });
 
-  await Task.insertMany([
-    { title: 'AL GMB', description: 'Create AL GMB for 57 Outlets', status: 'In Progress', category: 'Website Update', priority: 'High', dueDate: new Date('2026-04-17'), assignedTo: users[0]._id, assignedBy: admin._id, isTeamTask: true },
-    { title: 'Intown & Innoblitz agreement', description: 'Legal Agreement', status: 'Done', category: 'Legal', priority: 'High', dueDate: new Date('2026-04-11'), assignedTo: users[0]._id, assignedBy: admin._id, isTeamTask: true },
-    { title: 'TVSONE RO Uploading', description: 'TVSONE PMS RO Uploading', status: 'Need Discussion', category: 'Operations', priority: 'Medium', dueDate: new Date('2026-04-20'), assignedTo: users[1]._id, assignedBy: admin._id, isTeamTask: true },
-    { title: 'ZUDU AI', description: 'ZUDU AI Implementing in AL', status: 'Pending', category: 'AI', priority: 'Critical', dueDate: new Date('2026-04-17'), assignedTo: users[2]._id, assignedBy: admin._id, isTeamTask: true },
-    { title: 'Admin Self Task', description: 'Review monthly reports', status: 'Pending', category: 'Operations', priority: 'Medium', dueDate: new Date('2026-05-15'), assignedTo: admin._id, assignedBy: admin._id, isTeamTask: false },
-  ]);
+  // Team Leads (report to head)
+  const tl1 = await User.create({
+    employeeCode: '36368', name: 'Kishore', email: 'kishore@company.com',
+    username: 'Kishore', password: 'Year@2026', role: 'teamlead', parentId: head._id, status: 'active'
+  });
+  const tl2 = await User.create({
+    employeeCode: '66512', name: 'Sachin', email: 'sachin@company.com',
+    username: 'Sachin', password: 'Year@2006', role: 'teamlead', parentId: head._id, status: 'active'
+  });
 
-  console.log('Seeded successfully');
-  console.log('Admin login: username=admin, password=Admin@2026');
+  // Users (report to team leads)
+  await User.create({
+    employeeCode: 'U004', name: 'Abhi', email: 'abhi@company.com',
+    username: 'Abhi', password: 'Pass@2026', role: 'user', parentId: tl1._id, status: 'active'
+  });
+  await User.create({
+    employeeCode: 'U005', name: 'Arun', email: 'arun@company.com',
+    username: 'Arun', password: 'Pass@2026', role: 'user', parentId: tl1._id, status: 'active'
+  });
+  await User.create({
+    employeeCode: 'U006', name: 'Deepa', email: 'deepa@company.com',
+    username: 'Deepa', password: 'Pass@2026', role: 'user', parentId: tl2._id, status: 'active'
+  });
+
+  console.log('Seeded hierarchy: Admin → Head → Team Leads → Users');
+  console.log('Admin login: admin / Admin@2026');
+  console.log('Head login: VishnuRavi / Years@2027');
+  console.log('Team Lead login: Kishore / Year@2026');
   process.exit(0);
 }
 

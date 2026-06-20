@@ -7,9 +7,9 @@ import clsx from 'clsx'
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: '⊞' },
   { href: '/dashboard/my-tasks', label: 'My Tasks', icon: '✓' },
-  { href: '/dashboard/team-tasks', label: 'Team Tasks', icon: '👥', adminOnly: false },
+  { href: '/dashboard/team-tasks', label: 'Team Tasks', icon: '👥' },
   { href: '/dashboard/reminders', label: 'Reminders', icon: '🔔' },
-  { href: '/dashboard/users', label: 'Add User', icon: '➕', adminOnly: true },
+  { href: '/dashboard/users', label: 'Add User', icon: '➕', roles: ['admin', 'head', 'teamlead'] },
 ]
 
 export default function Sidebar() {
@@ -45,7 +45,7 @@ export default function Sidebar() {
 
         {/* Nav */}
         <nav className="flex-1 py-4 overflow-y-auto">
-          {navItems.filter(item => !item.adminOnly || user?.role === 'admin').map(item => (
+          {navItems.filter(item => !item.roles || item.roles.includes(user?.role || '')).map(item => (
             <Link key={item.href} href={item.href}
               className={clsx(
                 'flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-colors text-sm font-medium',

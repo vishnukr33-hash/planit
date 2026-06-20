@@ -4,6 +4,19 @@ const { protect } = require('../middleware/auth');
 const { notifyTaskAssigned, notifyStatusUpdate } = require('../utils/whatsapp');
 const { sendEmail } = require('../utils/email');
 
+const User = require('../models/User');
+
+// Helper: get all subordinate user IDs recursively
+async function getSubordinateIds(userId) {
+  const directChildren = await User.find({ parentId: userId }).select('_id');
+  let ids = directChildren.map(u => u._id);
+  for (const child of directChildren) {
+    const grandChildren = await getSubordinateIds(child._id);
+    ids = ids.concat(grandChildren);
+  }
+  return ids;
+}
+
 // Get tasks
 router.get('/', protect, async (req, res) => {
   try {
@@ -11,9 +24,20 @@ router.get('/', protect, async (req, res) => {
     const query = {};
 
     if (req.user.role === 'admin') {
+      // Admin sees ALL tasks in the hierarchy
       if (assignedTo) query.assignedTo = assignedTo;
       if (isTeamTask !== undefined) query.isTeamTask = isTeamTask === 'true';
+    } else if (req.user.role === 'head' || req.user.role === 'teamlead') {
+      // Head/TeamLead: see tasks assigned BY them + tasks assigned TO them
+      if (isTeamTask === 'true') {
+        query.assignedBy = req.user._id;
+      } else if (assignedTo) {
+        query.assignedTo = assignedTo;
+      } else {
+        query.$or = [{ assignedTo: req.user._id }, { assignedBy: req.user._id }];
+      }
     } else {
+      // Regular user: only their own tasks
       query.assignedTo = req.user._id;
     }
 
@@ -31,8 +55,8 @@ router.get('/', protect, async (req, res) => {
 
     const total = await Task.countDocuments(query);
     const tasks = await Task.find(query)
-      .populate('assignedTo', 'name username employeeCode')
-      .populate('assignedBy', 'name username')
+      .populate('assignedTo', 'name username employeeCode role')
+      .populate('assignedBy', 'name username role')
       .populate('comments.user', 'name username')
       .skip((page - 1) * limit)
       .limit(Number(limit))

@@ -9,15 +9,21 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
 interface UserForm {
-  employeeCode: string; name: string; email: string; username: string; password: string; phone: string; status: string
+  employeeCode: string; name: string; email: string; username: string; password: string; phone: string; role: string; status: string
 }
 
-const emptyForm: UserForm = { employeeCode: '', name: '', email: '', username: '', password: '', phone: '', status: 'active' }
+const emptyForm: UserForm = { employeeCode: '', name: '', email: '', username: '', password: '', phone: '', role: 'user', status: 'active' }
 
 export default function UsersPage() {
   const { user } = useAuthStore()
   const router = useRouter()
   const qc = useQueryClient()
+
+  // Determine which roles this user can create
+  const allowedRoles = user?.role === 'admin' ? ['head', 'teamlead', 'user']
+    : user?.role === 'head' ? ['teamlead']
+    : user?.role === 'teamlead' ? ['user']
+    : []
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editUser, setEditUser] = useState<any>(null)
@@ -25,7 +31,7 @@ export default function UsersPage() {
   const [resetModal, setResetModal] = useState<any>(null)
   const [newPass, setNewPass] = useState('')
 
-  if (user?.role !== 'admin') { router.push('/dashboard'); return null }
+  if (user?.role === 'user') { router.push('/dashboard'); return null }
 
   const { data, isLoading } = useQuery({
     queryKey: ['users', search],
@@ -54,7 +60,7 @@ export default function UsersPage() {
     onError: (err: any) => toast.error(err.response?.data?.message || 'Error'),
   })
 
-  const openEdit = (u: any) => { setEditUser(u); setForm({ employeeCode: u.employeeCode, name: u.name, email: u.email, username: u.username, password: '', phone: u.phone || '', status: u.status }); setShowModal(true) }
+  const openEdit = (u: any) => { setEditUser(u); setForm({ employeeCode: u.employeeCode, name: u.name, email: u.email, username: u.username, password: '', phone: u.phone || '', role: u.role || 'user', status: u.status }); setShowModal(true) }
   const closeModal = () => { setShowModal(false); setEditUser(null); setForm(emptyForm) }
 
   return (
@@ -82,7 +88,7 @@ export default function UsersPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700">
-                    {['E.Code', 'Name', 'Email ID', 'Phone', 'Username', 'Password', 'Status', 'Actions'].map(h => (
+                    {['E.Code', 'Name', 'Email ID', 'Phone', 'Username', 'Role', 'Password', 'Status', 'Actions'].map(h => (
                       <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -99,6 +105,9 @@ export default function UsersPage() {
                           : <span className="text-slate-300 dark:text-slate-600 text-xs italic">—</span>}
                       </td>
                       <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{u.username}</td>
+                      <td className="py-3 px-4">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 capitalize">{u.role}</span>
+                      </td>
                       <td className="py-3 px-4">
                         <button onClick={() => setResetModal(u)} className="text-xs text-blue-600 hover:underline">Reset</button>
                       </td>
@@ -166,6 +175,12 @@ export default function UsersPage() {
                   <label className="label">{editUser ? 'New Password' : 'Password *'}</label>
                   <input className="input" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required={!editUser} />
                 </div>
+              </div>
+              <div>
+                <label className="label">Role *</label>
+                <select className="input" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+                  {allowedRoles.map(r => <option key={r} value={r}>{r === 'teamlead' ? 'Team Lead' : r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+                </select>
               </div>
               <div>
                 <label className="label">Status</label>

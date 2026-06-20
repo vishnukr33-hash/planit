@@ -42,6 +42,7 @@ export const resetPassword = (token: string, password: string) => api.post(`/aut
 
 // Users
 export const getUsers = (params?: object) => api.get('/users', { params })
+export const getSubordinates = () => api.get('/users/subordinates')
 export const createUser = (data: object) => api.post('/users', data)
 export const updateUser = (id: string, data: object) => api.put(`/users/${id}`, data)
 export const toggleUserStatus = (id: string) => api.patch(`/users/${id}/status`)

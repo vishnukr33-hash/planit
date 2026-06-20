@@ -7,7 +7,7 @@ interface User {
   email: string
   username: string
   employeeCode: string
-  role: 'admin' | 'user'
+  role: 'admin' | 'head' | 'teamlead' | 'user'
   status: string
   phone?: string
 }

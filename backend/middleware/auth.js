@@ -23,3 +23,9 @@ exports.adminOnly = (req, res, next) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin access required' });
   next();
 };
+
+// Can manage users (admin, head, teamlead)
+exports.canManageUsers = (req, res, next) => {
+  if (['admin', 'head', 'teamlead'].includes(req.user.role)) return next();
+  return res.status(403).json({ message: 'Not authorized to manage users' });
+};
