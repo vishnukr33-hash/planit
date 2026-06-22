@@ -20,26 +20,22 @@ async function getSubordinateIds(userId) {
 // Get tasks
 router.get('/', protect, async (req, res) => {
   try {
-    const { status, category, priority, isTeamTask, assignedTo, search, filter, page = 1, limit = 50 } = req.query;
+    const { status, category, priority, isTeamTask, assignedTo, search, filter, startDate, endDate, page = 1, limit = 50 } = req.query;
     const query = { isDeleted: { $ne: true } };
 
     if (req.user.role === 'admin') {
-      // Admin sees ALL tasks in the hierarchy
       if (assignedTo) query.assignedTo = assignedTo;
       if (isTeamTask !== undefined) query.isTeamTask = isTeamTask === 'true';
     } else if (req.user.role === 'head' || req.user.role === 'teamlead') {
-      // Head/TeamLead Team Tasks: only tasks they assigned to others
       if (isTeamTask === 'true') {
         query.assignedBy = req.user._id;
-        query.assignedTo = { $ne: req.user._id }; // exclude self-tasks
+        query.assignedTo = { $ne: req.user._id };
       } else if (assignedTo) {
         query.assignedTo = assignedTo;
       } else {
-        // My Tasks view: tasks assigned to me
         query.assignedTo = req.user._id;
       }
     } else {
-      // Regular user: only their own tasks
       query.assignedTo = req.user._id;
     }
 
@@ -47,6 +43,13 @@ router.get('/', protect, async (req, res) => {
     if (category) query.category = category;
     if (priority) query.priority = priority;
     if (search) query.$or = [{ title: new RegExp(search, 'i') }, { description: new RegExp(search, 'i') }];
+
+    // Date range filtering
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
+    }
 
     if (filter === 'overdue') {
       const today = new Date();
@@ -141,26 +144,29 @@ router.put('/:id', protect, async (req, res) => {
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
     const isAdmin = req.user.role === 'admin';
+    const isCreator = task.assignedBy?.toString() === req.user._id.toString();
     const isAssigned = task.assignedTo.toString() === req.user._id.toString();
 
-    if (!isAdmin && !isAssigned) {
+    if (!isAdmin && !isAssigned && !isCreator) {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    // If task is locked (team member submitted Done), only admin can edit
-    if (task.lockedByDone && !isAdmin) {
-      return res.status(403).json({ message: 'Task is locked after Done submission. Only admin can edit.' });
+    // If task is locked (Done submitted), only creator/admin can edit
+    if (task.lockedByDone && !isAdmin && !isCreator) {
+      return res.status(403).json({ message: 'Task is locked after Done. Only task creator can edit.' });
     }
 
-    // Team members: if self-assigned task, allow all fields; if admin-assigned, only status
+    // Permission logic:
+    // - Admin: full edit
+    // - Creator (head/teamlead who assigned): full edit
+    // - Assignee on self-created task: full edit
+    // - Assignee on assigned task: only status
     let updateData = req.body;
-    if (!isAdmin) {
+    if (!isAdmin && !isCreator) {
       const isSelfAssigned = task.assignedBy?.toString() === req.user._id.toString();
       if (isSelfAssigned) {
-        // self-assigned: allow full edit (but not lockedByDone tasks)
         updateData = req.body;
       } else {
-        // admin-assigned: only allow status update
         const { status } = req.body;
         updateData = {};
         if (status) updateData.status = status;
@@ -242,12 +248,13 @@ router.patch('/:id/accept', protect, async (req, res) => {
   }
 });
 
-// Delete task — soft delete (move to trash)
+// Delete task — soft delete (creator or admin)
 router.delete('/:id', protect, async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: 'Task not found' });
-    if (req.user.role !== 'admin' && req.user.role !== 'head' && req.user.role !== 'teamlead') {
+    const isCreator = task.assignedBy?.toString() === req.user._id.toString();
+    if (req.user.role === 'user' && !isCreator) {
       return res.status(403).json({ message: 'Not authorized to delete tasks' });
     }
     task.isDeleted = true;
@@ -297,24 +304,29 @@ router.patch('/:id/restore', protect, async (req, res) => {
   }
 });
 
-// Export tasks to CSV (Excel-compatible)
+// Export tasks to CSV (Excel-compatible) with date range
 router.get('/export/excel', protect, async (req, res) => {
   try {
+    const { startDate, endDate } = req.query;
     const query = { isDeleted: { $ne: true } };
     if (req.user.role !== 'admin') {
       query.$or = [{ assignedTo: req.user._id }, { assignedBy: req.user._id }];
+    }
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
     }
     const tasks = await Task.find(query)
       .populate('assignedTo', 'name employeeCode')
       .populate('assignedBy', 'name')
       .sort({ createdAt: -1 });
 
-    // Generate CSV
     const headers = 'Title,Description,Status,Category,Priority,Due Date,Assigned To,Assigned By,Created At\n';
     const rows = tasks.map(t => {
       const due = t.dueDate ? new Date(t.dueDate).toLocaleString('en-IN') : '';
       const created = new Date(t.createdAt).toLocaleString('en-IN');
-      return `"${(t.title || '').replace(/"/g, '""')}","${(t.description || '').replace(/"/g, '""')}","${t.status}","${t.category}","${t.priority}","${due}","${t.assignedTo?.name || ''}","${t.assignedBy?.name || ''}","${created}"`;
+      return '"' + (t.title || '').replace(/"/g, '""') + '","' + (t.description || '').replace(/"/g, '""') + '","' + t.status + '","' + t.category + '","' + t.priority + '","' + due + '","' + (t.assignedTo?.name || '') + '","' + (t.assignedBy?.name || '') + '","' + created + '"';
     }).join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
