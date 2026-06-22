@@ -92,7 +92,7 @@ router.post('/', protect, async (req, res) => {
       ...body,
       assignedBy: req.user._id,
       assignedTo: assignedTo || req.user._id,
-      isTeamTask: req.user.role === 'admin' && assignedTo && assignedTo !== req.user._id.toString()
+      isTeamTask: assignedTo && assignedTo !== req.user._id.toString()
     };
 
     const task = await Task.create(taskData);

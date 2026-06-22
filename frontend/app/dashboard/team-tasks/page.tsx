@@ -28,7 +28,7 @@ export default function TeamTasksPage() {
   const { data: usersData } = useQuery({
     queryKey: ['users'],
     queryFn: () => getUsers({ limit: 100, status: 'active' }).then(r => r.data),
-    enabled: user?.role === 'admin',
+    enabled: user?.role !== 'user',
   })
 
   const { data: tasksData, isLoading } = useQuery({
