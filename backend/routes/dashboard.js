@@ -5,6 +5,7 @@ const { protect } = require('../middleware/auth');
 
 router.get('/stats', protect, async (req, res) => {
   try {
+    const { startDate, endDate } = req.query;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -12,8 +13,14 @@ router.get('/stats', protect, async (req, res) => {
 
     const baseQuery = req.user.role === 'admin' ? {} : { assignedTo: req.user._id };
 
-// Open tasks = not Done (Pending + Accepted + In Progress + Need Discussion + Delayed)
-const openTaskStatuses = ['Pending', 'Accepted', 'In Progress', 'Need Discussion', 'Delayed']
+    // Add date range filter if provided
+    if (startDate || endDate) {
+      baseQuery.createdAt = {};
+      if (startDate) baseQuery.createdAt.$gte = new Date(startDate);
+      if (endDate) baseQuery.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
+    }
+
+const openTaskStatuses = ['Pending', 'In Progress', 'Need Discussion', 'Delayed']
 
 const [total, open, pending, completed, overdue, dueToday, inProgress, needDiscussion, delayed, totalUsers] = await Promise.all([
   Task.countDocuments(baseQuery),
