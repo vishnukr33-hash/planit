@@ -98,6 +98,13 @@ export default function TeamTasksPage() {
         {/* Team sections */}
         {isLoading ? (
           <div className="flex justify-center py-12"><div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>
+        ) : !(usersData?.users?.length) ? (
+          <div className="card overflow-hidden">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+              <h2 className="font-semibold">All Team Tasks</h2>
+            </div>
+            <TaskTable tasks={tasksData?.tasks || []} showAssignee />
+          </div>
         ) : (
           <div className="space-y-3">
             {(usersData?.users || []).map((member: any, idx: number) => {
