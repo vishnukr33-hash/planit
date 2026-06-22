@@ -87,4 +87,4 @@ EMAIL_PORT=587
 EMAIL_USER=your@email.com
 EMAIL_PASS=your_app_password
 CLIENT_URL=http://localhost:3000
-```
+

@@ -28,13 +28,15 @@ router.get('/', protect, async (req, res) => {
       if (assignedTo) query.assignedTo = assignedTo;
       if (isTeamTask !== undefined) query.isTeamTask = isTeamTask === 'true';
     } else if (req.user.role === 'head' || req.user.role === 'teamlead') {
-      // Head/TeamLead: see tasks assigned BY them + tasks assigned TO them
+      // Head/TeamLead Team Tasks: only tasks they assigned to others
       if (isTeamTask === 'true') {
         query.assignedBy = req.user._id;
+        query.assignedTo = { $ne: req.user._id }; // exclude self-tasks
       } else if (assignedTo) {
         query.assignedTo = assignedTo;
       } else {
-        query.$or = [{ assignedTo: req.user._id }, { assignedBy: req.user._id }];
+        // My Tasks view: tasks assigned to me
+        query.assignedTo = req.user._id;
       }
     } else {
       // Regular user: only their own tasks

@@ -58,8 +58,8 @@ export default function TeamTasksPage() {
   const getTasksForUser = (userId: string) =>
     (tasksData?.tasks || []).filter((t: any) => t.assignedTo?._id === userId)
 
-  // For non-admin: show flat list
-  if (user?.role !== 'admin') {
+  // For regular users: show flat list of tasks assigned to them
+  if (user?.role === 'user') {
     return (
       <DashboardLayout title="Team Tasks">
         <div className="card overflow-hidden">
