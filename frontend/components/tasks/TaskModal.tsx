@@ -65,7 +65,7 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
     mutation.mutate(payload)
   }
 
-  const statusOptions = !isEdit ? ['Pending'] : isAdmin ? Array.from(STATUSES) : ['In Progress', 'Need Discussion', 'Done', 'Delayed']
+  const statusOptions = !isEdit ? ['Pending'] : isAdmin ? Array.from(STATUSES) : ['In Progress', 'Need Discussion', 'Done', 'Delayed'];
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in">
