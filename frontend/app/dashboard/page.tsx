@@ -97,8 +97,6 @@ export default function DashboardPage() {
           <KPICard label="Completed" value={kpis.completed || 0} icon="✅" color="bg-green-50 dark:bg-green-900/20" onClick={() => router.push(basePath + '?status=Done')} />
           <KPICard label="Overdue" value={kpis.overdue || 0} icon="⚠️" color="bg-red-50 dark:bg-red-900/20" onClick={() => router.push(basePath + '?filter=overdue')} />
           <KPICard label="Delayed" value={kpis.delayed || 0} icon="⏰" color="bg-orange-50 dark:bg-orange-900/20" onClick={() => router.push(basePath + '?status=Delayed')} />
-          <KPICard label="Overdue" value={kpis.overdue || 0} icon="⚠️" color="bg-red-50 dark:bg-red-900/20" onClick={() => router.push(basePath + '?filter=overdue')} />
-          <KPICard label="Delayed" value={kpis.delayed || 0} icon="⏰" color="bg-orange-50 dark:bg-orange-900/20" onClick={() => router.push(basePath + '?status=Delayed')} />
         </div>
 
 
