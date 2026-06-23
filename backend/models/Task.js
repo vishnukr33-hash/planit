@@ -15,12 +15,8 @@ const commentSchema = new mongoose.Schema({
     enum: ['comment', 'status_update'],
     default: 'comment'
   },
-  statusFrom: {
-    type: String
-  },
-  statusTo: {
-    type: String
-  },
+  statusFrom: String,
+  statusTo: String,
   createdAt: {
     type: Date,
     default: Date.now
@@ -74,9 +70,7 @@ const taskSchema = new mongoose.Schema(
       default: 'Medium'
     },
 
-    dueDate: {
-      type: Date
-    },
+    dueDate: Date,
 
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
@@ -102,9 +96,7 @@ const taskSchema = new mongoose.Schema(
       }
     ],
 
-    completedAt: {
-      type: Date
-    },
+    completedAt: Date,
 
     reminderSent: {
       type: Boolean,
@@ -116,7 +108,6 @@ const taskSchema = new mongoose.Schema(
       default: false
     },
 
-    // Once a team member submits Done, only admin can edit
     lockedByDone: {
       type: Boolean,
       default: false
@@ -127,7 +118,6 @@ const taskSchema = new mongoose.Schema(
   }
 );
 
-// Auto-set completedAt and lockedByDone
 taskSchema.pre('save', function (next) {
   if (this.isModified('status') && this.status === 'Done') {
     if (!this.completedAt) {
@@ -142,7 +132,5 @@ taskSchema.pre('save', function (next) {
   next();
 });
 
-// Prevent OverwriteModelError
-const Task = mongoose.models.Task || mongoose.model('Task', taskSchema);
-
-module.exports = Task;
+module.exports =
+  mongoose.models.Task || mongoose.model('Task', taskSchema);
