@@ -1,28 +1,49 @@
-Planit – Task Management Enhancement Requirements
+const mongoose = require('mongoose');
 
-1. Remove the "Accept Task" button for Users. Tasks assigned to users should be visible immediately without requiring acceptance.
+const commentSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  text: { type: String, required: true },
+  type: { type: String, enum: ['comment', 'status_update'], default: 'comment' },
+  statusFrom: { type: String },
+  statusTo: { type: String },
+  createdAt: { type: Date, default: Date.now }
+});
 
-2. For assigned tasks, only the Status field should be editable by the assignee. All other fields (Task Title, Description, Category, Priority, Due Date, Due Time, and Assigned To) should remain read-only. Self-created tasks can be fully edited by the task owner.
+const taskSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true },
+  description: { type: String, trim: true, default: '' },
+  status: {
+    type: String,
+    enum: ['Pending', 'Accepted', 'In Progress', 'Need Discussion', 'Done', 'Delayed'],
+    default: 'Pending'
+  },
+  category: {
+    type: String,
+    enum: ['Website Update', 'Legal', 'AI', 'Operations', 'Marketing', 'Development', 'Others'],
+    default: 'Others'
+  },
+  priority: { type: String, enum: ['Low', 'Medium', 'High', 'Critical'], default: 'Medium' },
+  dueDate: { type: Date },
+  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  isTeamTask: { type: Boolean, default: false },
+  comments: [commentSchema],
+  attachments: [{ name: String, url: String }],
+  completedAt: { type: Date },
+  reminderSent: { type: Boolean, default: false },
+  hourReminderSent: { type: Boolean, default: false },
+  // Once a team member submits Done, only admin can edit
+  lockedByDone: { type: Boolean, default: false },
+}, { timestamps: true });
 
-3. Display individual productivity metrics for each team member on the Team Tasks page. Productivity should include assigned tasks, completed tasks, pending tasks, overdue tasks, and completion percentage.
+// Auto-set completedAt and lockedByDone
+taskSchema.pre('save', function (next) {
+  if (this.isModified('status') && this.status === 'Done') {
+    if (!this.completedAt) this.completedAt = new Date();
+    // Lock task if it's a team task (assigned to someone other than creator)
+    if (this.isTeamTask) this.lockedByDone = true;
+  }
+  next();
+});
 
-4. Task ownership and management should follow the hierarchy:
-
-   * If a Head assigns a task to a Team Lead, the Head should have Edit and Delete permissions for that task.
-   * If a Team Lead assigns a task to a User, the Team Lead should have Edit and Delete permissions for that task.
-   * Task creators should always have Edit and Delete rights for tasks assigned by them.
-
-5. Add an Excel Export option on both pages, with exported data filtered according to the selected date range:
-
-   * Team Tasks page
-   * My Tasks page
-
-   The export should include all visible task details and respect applied filters.
-
-6. Add date-based filtering across the application:
-
-   * Dashboard should support Month-wise and Custom Date Range views, with Month-wise selected as the default view to provide more precise productivity insights.
-   * Team Tasks page should support Month-wise and Custom Date Range filtering.
-   * My Tasks page should support Month-wise and Custom Date Range filtering.
-
-   All charts, KPIs, productivity metrics, and task listings should update dynamically based on the selected date range.
+module.exports = mongoose.model('Task', taskSchema);
