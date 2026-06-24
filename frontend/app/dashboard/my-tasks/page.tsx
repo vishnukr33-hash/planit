@@ -1,18 +1,23 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getTasks } from '@/lib/api'
+import { getTasks, exportTasks } from '@/lib/api'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import TaskTable from '@/components/tasks/TaskTable'
 import TaskModal from '@/components/tasks/TaskModal'
+import DateFilter from '@/components/DateFilter'
 import { STATUSES, CATEGORIES, PRIORITIES } from '@/lib/constants'
 import { useAuthStore } from '@/lib/store'
 import { useSearchParams } from 'next/navigation'
+import toast from 'react-hot-toast'
 
 export default function MyTasksPage() {
   const { user } = useAuthStore()
   const searchParams = useSearchParams()
   const [showModal, setShowModal] = useState(false)
+
+  // Date range state
+  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({ startDate: '', endDate: '' })
 
   // Pre-apply filters from dashboard KPI navigation
   const [filters, setFilters] = useState({
@@ -40,9 +45,11 @@ export default function MyTasksPage() {
   if (filters.filter === 'overdue') {
     queryParams.filter = 'overdue'
   }
+  if (dateRange.startDate) queryParams.startDate = dateRange.startDate
+  if (dateRange.endDate) queryParams.endDate = dateRange.endDate
 
   const { data, isLoading } = useQuery({
-    queryKey: ['tasks', 'my', filters],
+    queryKey: ['tasks', 'my', filters, dateRange],
     queryFn: () => getTasks(queryParams).then(r => r.data),
   })
 
@@ -52,9 +59,33 @@ export default function MyTasksPage() {
     ? `Status: ${filters.status}`
     : null
 
+  const handleExport = async () => {
+    try {
+      const params: any = { isTeamTask: false }
+      if (dateRange.startDate) params.startDate = dateRange.startDate
+      if (dateRange.endDate) params.endDate = dateRange.endDate
+      const response = await exportTasks(params)
+      const blob = new Blob([response.data], { type: 'text/csv' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `my-tasks-${dateRange.startDate || 'all'}-to-${dateRange.endDate || 'all'}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('Export downloaded')
+    } catch {
+      toast.error('Export failed')
+    }
+  }
+
   return (
     <DashboardLayout title="My Tasks">
       <div className="space-y-4">
+        {/* Date Filter */}
+        <div className="card p-4">
+          <DateFilter onChange={setDateRange} defaultMode="month" />
+        </div>
+
         {/* Active filter banner */}
         {activeFilterLabel && (
           <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-sm text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
@@ -83,6 +114,9 @@ export default function MyTasksPage() {
             {PRIORITIES.map(p => <option key={p}>{p}</option>)}
           </select>
           <div className="flex-1" />
+          <button onClick={handleExport} className="btn-secondary flex items-center gap-2 text-sm">
+            📥 Export Excel
+          </button>
           <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
             <span>+</span> Add Task
           </button>
