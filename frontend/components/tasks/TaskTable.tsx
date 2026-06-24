@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { deleteTask, acceptTask } from '@/lib/api'
+import { deleteTask } from '@/lib/api'
 import { STATUS_COLORS, PRIORITY_COLORS, CATEGORY_COLORS } from '@/lib/constants'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/lib/store'
@@ -26,12 +26,6 @@ export default function TaskTable({ tasks, showAssignee }: Props) {
     mutationFn: deleteTask,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['tasks'] }); toast.success('Task deleted') },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to delete'),
-  })
-
-  const acceptMutation = useMutation({
-    mutationFn: acceptTask,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tasks'] }); toast.success('Task accepted') },
-    onError: (err: any) => toast.error(err.response?.data?.message || 'Error'),
   })
 
   const isOverdue = (dueDate: string, status: string) =>
@@ -60,9 +54,14 @@ export default function TaskTable({ tasks, showAssignee }: Props) {
             {tasks.map(task => {
               const overdue = isOverdue(task.dueDate, task.status)
               const isAssignedToMe = task.assignedTo?._id === user?._id
-              const isPending = task.status === 'Pending'
+              const isCreator = task.assignedBy?._id === user?._id
               const isDone = task.status === 'Done'
-              const isLocked = task.lockedByDone && !isAdmin
+              const isLocked = task.lockedByDone && !isAdmin && !isCreator
+
+              // Edit permission: admin, creator, or assignee (not locked, not done)
+              const canEdit = isAdmin || isCreator || (!isLocked && !isDone && isAssignedToMe)
+              // Delete permission: admin, or creator (head/teamlead who assigned it)
+              const canDelete = isAdmin || (isCreator && user?.role !== 'user')
 
               return (
                 <tr key={task._id} className={clsx(
@@ -98,12 +97,12 @@ export default function TaskTable({ tasks, showAssignee }: Props) {
                     <span className={clsx('badge', STATUS_COLORS[task.status])}>{task.status}</span>
                   </td>
 
-                  {/* Category — read-only badge for users */}
+                  {/* Category */}
                   <td className="py-3 px-4">
                     <span className={clsx('badge', CATEGORY_COLORS[task.category] || 'bg-slate-100 text-slate-600')}>{task.category}</span>
                   </td>
 
-                  {/* Priority — read-only badge for users */}
+                  {/* Priority */}
                   <td className="py-3 px-4">
                     <span className={clsx('badge', PRIORITY_COLORS[task.priority])}>{task.priority}</span>
                   </td>
@@ -124,27 +123,18 @@ export default function TaskTable({ tasks, showAssignee }: Props) {
                   {/* Actions */}
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-1 flex-wrap">
-                      {/* Accept — only for assigned user on Pending tasks */}
-                      {!isAdmin && isAssignedToMe && isPending && (
-                        <button onClick={() => acceptMutation.mutate(task._id)}
-                          disabled={acceptMutation.isPending}
-                          className="px-2 py-1 rounded-lg bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 text-xs font-medium hover:bg-teal-100 transition-colors">
-                          Accept
-                        </button>
-                      )}
-
                       {/* View/chat */}
                       <button onClick={() => setViewTask(task)} title="View & Chat"
                         className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500 transition-colors">💬</button>
 
-                      {/* Edit — admin always, user only if not locked and not done */}
-                      {(isAdmin || (!isLocked && !isDone && isAssignedToMe)) && (
+                      {/* Edit — admin, creator, or assigned user (if not locked/done) */}
+                      {canEdit && (
                         <button onClick={() => setEditTask(task)} title="Edit"
                           className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500 transition-colors">✏️</button>
                       )}
 
-                      {/* Delete — admin only */}
-                      {isAdmin && (
+                      {/* Delete — admin or task creator (head/teamlead) */}
+                      {canDelete && (
                         <button onClick={() => { if (confirm('Delete this task?')) deleteMutation.mutate(task._id) }} title="Delete"
                           className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors">🗑️</button>
                       )}
