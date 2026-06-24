@@ -20,7 +20,7 @@ async function getSubordinateIds(userId) {
 // Get tasks
 router.get('/', protect, async (req, res) => {
   try {
-    const { status, category, priority, isTeamTask, assignedTo, search, filter, page = 1, limit = 50 } = req.query;
+    const { status, category, priority, isTeamTask, assignedTo, search, filter, page = 1, limit = 50, startDate, endDate } = req.query;
     const query = { isDeleted: { $ne: true } };
 
     if (req.user.role === 'admin') {
@@ -55,6 +55,13 @@ router.get('/', protect, async (req, res) => {
       query.status = { $nin: ['Done'] };
     }
 
+    // Date range filtering
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
+    }
+
     const total = await Task.countDocuments(query);
     const tasks = await Task.find(query)
       .populate('assignedTo', 'name username employeeCode role')
@@ -87,12 +94,15 @@ router.get('/:id', protect, async (req, res) => {
 // Create task
 router.post('/', protect, async (req, res) => {
   try {
-        const { isTeamTask, assignedTo, ...body } = req.body;
+    const { isTeamTask, assignedTo, ...body } = req.body;
+    const isAssignedToOther = assignedTo && assignedTo !== req.user._id.toString();
     const taskData = {
       ...body,
       assignedBy: req.user._id,
       assignedTo: assignedTo || req.user._id,
-      isTeamTask: assignedTo && assignedTo !== req.user._id.toString()
+      isTeamTask: isAssignedToOther,
+      // Tasks assigned to others start as "In Progress" directly (no acceptance required)
+      status: isAssignedToOther ? 'In Progress' : (body.status || 'Pending'),
     };
 
     const task = await Task.create(taskData);
@@ -103,8 +113,7 @@ router.post('/', protect, async (req, res) => {
 
     // Send WhatsApp + Email notification on assignment (only if assigned to someone else)
     if (task.assignedTo._id.toString() !== req.user._id.toString()) {
-      const dueStr = task.dueDate ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'No due date'
-
+      const dueStr = task.dueDate ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'No due date';
 
       // WhatsApp
       if (task.assignedTo.phone) {
@@ -122,7 +131,7 @@ router.post('/', protect, async (req, res) => {
             <p><strong>Priority:</strong> ${task.priority}</p>
             <p><strong>Due:</strong> ${dueStr}</p>
             <p><strong>Description:</strong> ${task.description || 'N/A'}</p>
-            <p>Please login to Planit to accept and start working on it.</p>
+            <p>Please login to Planit to start working on it.</p>
             <p><a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display:inline-block;background:#1e3a5f;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Open Planit</a></p>`
         }).catch(() => {});
       }
@@ -134,7 +143,7 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
-// Update task — role-based restrictions
+// Update task — role-based restrictions with hierarchy support
 router.put('/:id', protect, async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
@@ -142,25 +151,31 @@ router.put('/:id', protect, async (req, res) => {
 
     const isAdmin = req.user.role === 'admin';
     const isAssigned = task.assignedTo.toString() === req.user._id.toString();
+    const isCreator = task.assignedBy?.toString() === req.user._id.toString();
 
-    if (!isAdmin && !isAssigned) {
+    // Authorization: admin, task creator (head/teamlead who assigned it), or the assignee
+    if (!isAdmin && !isAssigned && !isCreator) {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    // If task is locked (team member submitted Done), only admin can edit
-    if (task.lockedByDone && !isAdmin) {
-      return res.status(403).json({ message: 'Task is locked after Done submission. Only admin can edit.' });
+    // If task is locked (team member submitted Done), only admin/creator can edit
+    if (task.lockedByDone && !isAdmin && !isCreator) {
+      return res.status(403).json({ message: 'Task is locked after Done submission. Only admin/task creator can edit.' });
     }
 
-    // Team members: if self-assigned task, allow all fields; if admin-assigned, only status
     let updateData = req.body;
-    if (!isAdmin) {
+
+    if (isAdmin || isCreator) {
+      // Admin and task creator have full edit rights
+      updateData = req.body;
+    } else if (isAssigned) {
+      // Assignee: check if self-created or assigned by someone else
       const isSelfAssigned = task.assignedBy?.toString() === req.user._id.toString();
       if (isSelfAssigned) {
-        // self-assigned: allow full edit (but not lockedByDone tasks)
+        // self-assigned: allow full edit
         updateData = req.body;
       } else {
-        // admin-assigned: only allow status update
+        // assigned by someone else: only allow status update
         const { status } = req.body;
         updateData = {};
         if (status) updateData.status = status;
@@ -201,7 +216,7 @@ router.put('/:id', protect, async (req, res) => {
   }
 });
 
-// Accept task (team member) — sets status to Accepted
+// Accept task (team member) — kept for backward compatibility but tasks no longer start as Pending
 router.patch('/:id/accept', protect, async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
@@ -217,13 +232,13 @@ router.patch('/:id/accept', protect, async (req, res) => {
       return res.status(400).json({ message: `Task is already ${task.status}` });
     }
 
-    task.status = 'Accepted';
+    task.status = 'In Progress';
     task.comments.push({
       user: req.user._id,
       text: 'Task accepted',
       type: 'status_update',
       statusFrom: 'Pending',
-      statusTo: 'Accepted',
+      statusTo: 'In Progress',
     });
     await task.save();
 
@@ -232,7 +247,6 @@ router.patch('/:id/accept', protect, async (req, res) => {
       .populate('assignedBy', 'name username')
       .populate('comments.user', 'name username');
 
-    // Notify admin via socket
     if (populated.assignedBy) {
       req.io?.to(populated.assignedBy._id.toString()).emit('task:updated', populated);
     }
@@ -242,14 +256,20 @@ router.patch('/:id/accept', protect, async (req, res) => {
   }
 });
 
-// Delete task — soft delete (move to trash)
+// Delete task — soft delete (creator or admin can delete)
 router.delete('/:id', protect, async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: 'Task not found' });
-    if (req.user.role !== 'admin' && req.user.role !== 'head' && req.user.role !== 'teamlead') {
+
+    const isAdmin = req.user.role === 'admin';
+    const isCreator = task.assignedBy?.toString() === req.user._id.toString();
+
+    // Allow admin, head, teamlead, or the task creator to delete
+    if (!isAdmin && !isCreator && req.user.role !== 'head' && req.user.role !== 'teamlead') {
       return res.status(403).json({ message: 'Not authorized to delete tasks' });
     }
+
     task.isDeleted = true;
     task.deletedAt = new Date();
     await task.save();
@@ -297,24 +317,46 @@ router.patch('/:id/restore', protect, async (req, res) => {
   }
 });
 
-// Export tasks to CSV (Excel-compatible)
+// Export tasks to CSV (Excel-compatible) with date range support
 router.get('/export/excel', protect, async (req, res) => {
   try {
+    const { startDate, endDate, isTeamTask } = req.query;
     const query = { isDeleted: { $ne: true } };
-    if (req.user.role !== 'admin') {
-      query.$or = [{ assignedTo: req.user._id }, { assignedBy: req.user._id }];
+
+    if (req.user.role === 'admin') {
+      if (isTeamTask === 'true') {
+        query.isTeamTask = true;
+      }
+    } else if (req.user.role === 'head' || req.user.role === 'teamlead') {
+      if (isTeamTask === 'true') {
+        query.assignedBy = req.user._id;
+        query.assignedTo = { $ne: req.user._id };
+      } else {
+        query.assignedTo = req.user._id;
+      }
+    } else {
+      query.assignedTo = req.user._id;
     }
+
+    // Date range filter
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
+    }
+
     const tasks = await Task.find(query)
       .populate('assignedTo', 'name employeeCode')
       .populate('assignedBy', 'name')
       .sort({ createdAt: -1 });
 
     // Generate CSV
-    const headers = 'Title,Description,Status,Category,Priority,Due Date,Assigned To,Assigned By,Created At\n';
+    const headers = 'Title,Description,Status,Category,Priority,Due Date,Due Time,Assigned To,Assigned By,Created At\n';
     const rows = tasks.map(t => {
-      const due = t.dueDate ? new Date(t.dueDate).toLocaleString('en-IN') : '';
+      const due = t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-IN') : '';
+      const dueTime = t.dueDate ? new Date(t.dueDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
       const created = new Date(t.createdAt).toLocaleString('en-IN');
-      return `"${(t.title || '').replace(/"/g, '""')}","${(t.description || '').replace(/"/g, '""')}","${t.status}","${t.category}","${t.priority}","${due}","${t.assignedTo?.name || ''}","${t.assignedBy?.name || ''}","${created}"`;
+      return `"${(t.title || '').replace(/"/g, '""')}","${(t.description || '').replace(/"/g, '""')}","${t.status}","${t.category}","${t.priority}","${due}","${dueTime}","${t.assignedTo?.name || ''}","${t.assignedBy?.name || ''}","${created}"`;
     }).join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
