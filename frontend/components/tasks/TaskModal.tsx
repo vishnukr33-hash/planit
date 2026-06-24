@@ -5,7 +5,6 @@ import { createTask, updateTask, getSubordinates } from '@/lib/api'
 import { useAuthStore } from '@/lib/store'
 import { STATUSES, CATEGORIES, PRIORITIES } from '@/lib/constants'
 import toast from 'react-hot-toast'
-import clsx from 'clsx'
 
 interface Props {
   task?: any
@@ -20,6 +19,14 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
   const isEdit = !!task
   const isAdmin = user?.role === 'admin'
   const canAssign = user?.role !== 'user'
+
+  // Determine if the current user is the creator or just the assignee
+  const isCreator = task?.assignedBy?._id === user?._id
+  const isAssignedToMe = task?.assignedTo?._id === user?._id
+  const isSelfAssigned = task ? task.assignedBy?._id === task.assignedTo?._id : false
+
+  // If editing: assignee on someone else's task can only change status
+  const statusOnlyEdit = isEdit && !isAdmin && !isCreator && isAssignedToMe && !isSelfAssigned
 
   const [form, setForm] = useState({
     title: task?.title || '',
@@ -42,6 +49,7 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
     mutationFn: (data: object) => isEdit ? updateTask(task._id, data) : createTask(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       toast.success(isEdit ? 'Task updated' : 'Task created')
       onClose()
     },
@@ -50,6 +58,13 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Status-only edit: just send the status
+    if (statusOnlyEdit) {
+      mutation.mutate({ status: form.status })
+      return
+    }
+
     if (!form.title.trim()) return toast.error('Title is required')
     if (!form.dueDate) return toast.error('Due Date is required')
     if (!form.dueTime) return toast.error('Due Time is required')
@@ -65,25 +80,44 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
     mutation.mutate(payload)
   }
 
-  const statusOptions = !isEdit ? ['Pending'] : isAdmin ? Array.from(STATUSES) : ['In Progress', 'Need Discussion', 'Done', 'Delayed']
+  const statusOptions = !isEdit
+    ? ['Pending']
+    : isAdmin || isCreator
+    ? Array.from(STATUSES)
+    : ['In Progress', 'Need Discussion', 'Done', 'Delayed']
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide-in">
         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-          <h2 className="text-lg font-semibold">{isEdit ? 'Edit Task' : 'New Task'}</h2>
+          <h2 className="text-lg font-semibold">
+            {isEdit ? (statusOnlyEdit ? 'Update Status' : 'Edit Task') : 'New Task'}
+          </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl">✕</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Title — read-only for status-only edit */}
           <div>
-            <label className="label">Task Title *</label>
-            <input className="input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Enter task title" required />
+            <label className="label">Task Title {!statusOnlyEdit && '*'}</label>
+            {statusOnlyEdit ? (
+              <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.title}</p>
+            ) : (
+              <input className="input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Enter task title" required />
+            )}
           </div>
+
+          {/* Description — read-only for status-only edit */}
           <div>
             <label className="label">Description</label>
-            <textarea className="input resize-none" rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Task description..." />
+            {statusOnlyEdit ? (
+              <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed min-h-[60px]">{form.description || '—'}</p>
+            ) : (
+              <textarea className="input resize-none" rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Task description..." />
+            )}
           </div>
+
           <div className="grid grid-cols-2 gap-4">
+            {/* Status — always editable */}
             <div>
               <label className="label">Status</label>
               {isEdit ? (
@@ -94,30 +128,60 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
                 <input className="input bg-slate-50 dark:bg-slate-700/50" value="Pending" readOnly />
               )}
             </div>
+
+            {/* Priority — read-only for status-only edit */}
             <div>
               <label className="label">Priority</label>
-              <select className="input" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
-                {PRIORITIES.map(p => <option key={p}>{p}</option>)}
-              </select>
+              {statusOnlyEdit ? (
+                <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.priority}</p>
+              ) : (
+                <select className="input" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
+                  {PRIORITIES.map(p => <option key={p}>{p}</option>)}
+                </select>
+              )}
             </div>
           </div>
+
           <div className="grid grid-cols-2 gap-4">
+            {/* Category — read-only for status-only edit */}
             <div>
               <label className="label">Category</label>
-              <select className="input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-              </select>
+              {statusOnlyEdit ? (
+                <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.category}</p>
+              ) : (
+                <select className="input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                </select>
+              )}
             </div>
+
+            {/* Due Date — read-only for status-only edit */}
             <div>
-              <label className="label">Due Date *</label>
-              <input type="date" className="input" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} required />
+              <label className="label">Due Date {!statusOnlyEdit && '*'}</label>
+              {statusOnlyEdit ? (
+                <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.dueDate || '—'}</p>
+              ) : (
+                <input type="date" className="input" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} required />
+              )}
             </div>
           </div>
-          <div>
-            <label className="label">Due Time *</label>
-            <input type="time" className="input" value={form.dueTime} onChange={e => setForm(f => ({ ...f, dueTime: e.target.value }))} required />
-          </div>
-          {canAssign && (
+
+          {/* Due Time — read-only for status-only edit */}
+          {!statusOnlyEdit && (
+            <div>
+              <label className="label">Due Time *</label>
+              <input type="time" className="input" value={form.dueTime} onChange={e => setForm(f => ({ ...f, dueTime: e.target.value }))} required />
+            </div>
+          )}
+          {statusOnlyEdit && (
+            <div>
+              <label className="label">Due Time</label>
+              <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.dueTime || '—'}</p>
+            </div>
+          )}
+
+          {/* Assign To — read-only for status-only edit */}
+          {canAssign && !statusOnlyEdit && (
             <div>
               <label className="label">Assign To</label>
               <select className="input" value={form.assignedTo} onChange={e => setForm(f => ({ ...f, assignedTo: e.target.value }))}>
@@ -128,6 +192,13 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
               </select>
             </div>
           )}
+          {statusOnlyEdit && task?.assignedTo?.name && (
+            <div>
+              <label className="label">Assigned To</label>
+              <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{task.assignedTo.name}</p>
+            </div>
+          )}
+
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={mutation.isPending} className="btn-primary flex-1">
