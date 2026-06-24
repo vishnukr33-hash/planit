@@ -1,8 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getDashboardStats } from '@/lib/api'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import DateFilter from '@/components/DateFilter'
 import {
   Chart as ChartJS,
   ArcElement,
@@ -15,7 +17,7 @@ import {
   PointElement,
 } from 'chart.js'
 import { Doughnut, Bar, Line } from 'react-chartjs-2'
-import { format, subDays } from 'date-fns'
+import { format, subDays, eachDayOfInterval, parseISO } from 'date-fns'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store'
 
@@ -80,9 +82,15 @@ export default function DashboardPage() {
   const router = useRouter()
   const { user } = useAuthStore()
 
+  // Date range state — defaults to current month
+  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({ startDate: '', endDate: '' })
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['dashboard-stats'],
-    queryFn: () => getDashboardStats().then((r) => r.data),
+    queryKey: ['dashboard-stats', dateRange],
+    queryFn: () => getDashboardStats({
+      ...(dateRange.startDate ? { startDate: dateRange.startDate } : {}),
+      ...(dateRange.endDate ? { endDate: dateRange.endDate } : {}),
+    }).then((r) => r.data),
     refetchInterval: 60000,
     retry: 2,
     retryDelay: 2000,
@@ -91,24 +99,25 @@ export default function DashboardPage() {
   const kpis = data?.kpis || {}
 
   const basePath =
-    user?.role === 'admin'
+    user?.role === 'admin' || user?.role === 'head' || user?.role === 'teamlead'
       ? '/dashboard/team-tasks'
       : '/dashboard/my-tasks'
 
-  const last7Days = Array.from({ length: 7 }, (_, i) =>
-    format(subDays(new Date(), 6 - i), 'yyyy-MM-dd')
-  )
+  // Build trend data based on date range or last 7 days
+  const trendDays = dateRange.startDate && dateRange.endDate
+    ? eachDayOfInterval({ start: parseISO(dateRange.startDate), end: parseISO(dateRange.endDate) }).map(d => format(d, 'yyyy-MM-dd'))
+    : Array.from({ length: 7 }, (_, i) => format(subDays(new Date(), 6 - i), 'yyyy-MM-dd'))
 
   const trendMap = Object.fromEntries(
     (data?.completionTrend || []).map((d: any) => [d._id, d.count])
   )
 
   const trendData = {
-    labels: last7Days.map((d) => format(new Date(d), 'MMM dd')),
+    labels: trendDays.map((d) => format(new Date(d), 'MMM dd')),
     datasets: [
       {
         label: 'Completed',
-        data: last7Days.map((d) => trendMap[d] || 0),
+        data: trendDays.map((d) => trendMap[d] || 0),
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59,130,246,0.1)',
         fill: true,
@@ -120,10 +129,9 @@ export default function DashboardPage() {
   const pieLabels = [
     'Done',
     'In Progress',
-    'Not Accepted',
+    'Pending',
     'Need Discussion',
     'Delayed',
-    'Accepted',
   ]
 
   const pieColors = [
@@ -132,7 +140,6 @@ export default function DashboardPage() {
     '#f59e0b',
     '#8b5cf6',
     '#ef4444',
-    '#14b8a6',
   ]
 
   const statusMap = Object.fromEntries(
@@ -143,11 +150,7 @@ export default function DashboardPage() {
     labels: pieLabels,
     datasets: [
       {
-        data: pieLabels.map((l) =>
-          l === 'Not Accepted'
-            ? statusMap['Pending'] || 0
-            : statusMap[l] || 0
-        ),
+        data: pieLabels.map((l) => statusMap[l] || 0),
         backgroundColor: pieColors,
         borderWidth: 2,
       },
@@ -157,10 +160,9 @@ export default function DashboardPage() {
   const pieRouteMap: Record<string, string> = {
     Done: 'status=Done',
     'In Progress': 'status=In+Progress',
-    'Not Accepted': 'status=Pending',
+    Pending: 'status=Pending',
     'Need Discussion': 'status=Need+Discussion',
     Delayed: 'status=Delayed',
-    Accepted: 'status=Accepted',
   }
 
   const handlePieClick = (_evt: any, elements: any[]) => {
@@ -222,6 +224,11 @@ export default function DashboardPage() {
     <DashboardLayout title="Dashboard">
       <div className="space-y-6">
 
+        {/* Date Filter */}
+        <div className="card p-4">
+          <DateFilter onChange={setDateRange} defaultMode="month" />
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
           <KPICard label="Open Tasks" value={kpis.open || 0} icon="📂" color="bg-blue-50 dark:bg-blue-900/20" onClick={() => router.push(basePath)} />
           <KPICard label="In Progress" value={kpis.inProgress || 0} icon="🔄" color="bg-indigo-50 dark:bg-indigo-900/20" onClick={() => router.push(basePath + '?status=In+Progress')} />
@@ -234,7 +241,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="card p-5 lg:col-span-2">
             <h3 className="font-semibold mb-4">
-              Task Completion Trend (Last 7 Days)
+              Task Completion Trend
             </h3>
 
             <Line
@@ -301,7 +308,7 @@ export default function DashboardPage() {
                     <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-blue-500 rounded-full"
-                        style={{ width: `${u.productivity}%` }}
+                        style={{ width: `${Math.min(u.productivity, 100)}%` }}
                       />
                     </div>
                   </div>
