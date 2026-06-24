@@ -58,13 +58,14 @@ export const deleteTask = (id: string) => api.delete(`/tasks/${id}`)
 export const getTrashTasks = () => api.get('/tasks/trash/list')
 export const restoreTask = (id: string) => api.patch(`/tasks/${id}/restore`)
 export const permanentDeleteTask = (id: string) => api.delete(`/tasks/${id}/permanent`)
-export const exportTasks = () => api.get('/tasks/export/excel', { responseType: 'blob' })
+export const exportTasks = (params?: object) => api.get('/tasks/export/excel', { params, responseType: 'blob' })
 export const addComment = (id: string, text: string) => api.post(`/tasks/${id}/comments`, { text })
 export const completeTask = (id: string) => api.patch(`/tasks/${id}/complete`)
 export const acceptTask = (id: string) => api.patch(`/tasks/${id}/accept`)
 
 // Dashboard
-export const getDashboardStats = () => api.get('/dashboard/stats')
+export const getDashboardStats = (params?: object) => api.get('/dashboard/stats', { params })
+export const getTeamProductivity = (params?: object) => api.get('/dashboard/team-productivity', { params })
 
 // Reminders
 export const getReminders = () => api.get('/reminders')
