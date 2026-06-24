@@ -1,5 +1,6 @@
 export const STATUSES = ['Pending', 'In Progress', 'Need Discussion', 'Done', 'Delayed'] as const
 export const USER_STATUSES = ['In Progress', 'Need Discussion', 'Done', 'Delayed'] as const
+export const ALL_STATUSES = ['Pending', 'In Progress', 'Need Discussion', 'Done', 'Delayed', 'Accepted'] as const
 export const CATEGORIES = ['Website Update', 'Legal', 'AI', 'Operations', 'Marketing', 'Development', 'Others'] as const
 export const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'] as const
 
