@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { addComment, updateTask, acceptTask, completeTask } from '@/lib/api'
+import { addComment, updateTask, completeTask } from '@/lib/api'
 import { STATUS_COLORS, PRIORITY_COLORS, CATEGORY_COLORS } from '@/lib/constants'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/lib/store'
@@ -15,14 +15,18 @@ export default function TaskDetailModal({ task, onClose, onEdit }: { task: any; 
   const chatEndRef = useRef<HTMLDivElement>(null)
   const qc = useQueryClient()
   const isAdmin = user?.role === 'admin'
-  // Compare both string and object forms of _id for robustness
   const isAssigned = localTask.assignedTo?._id === user?._id ||
     String(localTask.assignedTo?._id) === String(user?._id)
-  const isLocked = localTask.lockedByDone && !isAdmin
+  const isCreator = localTask.assignedBy?._id === user?._id ||
+    String(localTask.assignedBy?._id) === String(user?._id)
+  const isLocked = localTask.lockedByDone && !isAdmin && !isCreator
 
-  // Status options: team members only see progress statuses
-  const availableStatuses = isAdmin
-    ? ['Pending', 'Accepted', 'In Progress', 'Need Discussion', 'Done', 'Delayed']
+  // Edit permission: admin, creator, or assignee (not locked)
+  const canEdit = isAdmin || isCreator || (isAssigned && !isLocked)
+
+  // Status options
+  const availableStatuses = isAdmin || isCreator
+    ? ['Pending', 'In Progress', 'Need Discussion', 'Done', 'Delayed']
     : ['In Progress', 'Need Discussion', 'Done', 'Delayed']
 
   useEffect(() => {
@@ -43,12 +47,6 @@ export default function TaskDetailModal({ task, onClose, onEdit }: { task: any; 
   const statusMutation = useMutation({
     mutationFn: (status: string) => updateTask(localTask._id, { status }),
     onSuccess: (res) => { refresh(res.data); toast.success('Status updated') },
-    onError: (err: any) => toast.error(err.response?.data?.message || 'Error'),
-  })
-
-  const acceptMutation = useMutation({
-    mutationFn: () => acceptTask(localTask._id),
-    onSuccess: (res) => { refresh(res.data); toast.success('Task accepted') },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Error'),
   })
 
@@ -74,29 +72,22 @@ export default function TaskDetailModal({ task, onClose, onEdit }: { task: any; 
             <h2 className="text-base font-semibold truncate">{localTask.title}</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Assigned to <strong>{localTask.assignedTo?.name}</strong>
+              {localTask.assignedBy?.name && <> · By <strong>{localTask.assignedBy.name}</strong></>}
               {localTask.dueDate && <> · Due <strong className={new Date(localTask.dueDate) < new Date() && localTask.status !== 'Done' ? 'text-red-500' : ''}>
                 {format(new Date(localTask.dueDate), 'dd MMM yyyy, hh:mm a')}
               </strong></>}
             </p>
           </div>
           <div className="flex gap-2 ml-3 flex-shrink-0">
-            {isAdmin && <button onClick={onEdit} className="btn-secondary text-sm py-1.5 px-3">Edit</button>}
+            {canEdit && <button onClick={onEdit} className="btn-secondary text-sm py-1.5 px-3">Edit</button>}
             <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
           </div>
         </div>
 
         {/* Action bar */}
         <div className="flex flex-wrap gap-2 px-5 py-3 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/40 flex-shrink-0">
-          {/* Accept button for team member on Pending task */}
-          {!isAdmin && isAssigned && localTask.status === 'Pending' && (
-            <button onClick={() => acceptMutation.mutate()} disabled={acceptMutation.isPending}
-              className="btn-primary text-sm py-1.5 px-4 bg-teal-600 hover:bg-teal-700">
-              ✅ Accept Task
-            </button>
-          )}
-
-          {/* Status dropdown — admin always, team member if accepted and not locked */}
-          {(isAdmin || (isAssigned && localTask.status !== 'Pending' && !isLocked)) && localTask.status !== 'Done' && (
+          {/* Status dropdown — admin/creator always, team member if not locked */}
+          {(isAdmin || isCreator || (isAssigned && !isLocked)) && localTask.status !== 'Done' && (
             <select
               className="input text-sm py-1.5 max-w-[180px]"
               value={localTask.status}
@@ -108,7 +99,7 @@ export default function TaskDetailModal({ task, onClose, onEdit }: { task: any; 
           )}
 
           {/* Mark Done button for assigned user */}
-          {!isAdmin && isAssigned && localTask.status !== 'Done' && localTask.status !== 'Pending' && !isLocked && (
+          {isAssigned && localTask.status !== 'Done' && !isLocked && (
             <button onClick={() => doneMutation.mutate()} disabled={doneMutation.isPending}
               className="btn-primary text-sm py-1.5 px-4 bg-green-600 hover:bg-green-700">
               🏁 Mark Done
