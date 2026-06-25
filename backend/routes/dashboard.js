@@ -93,7 +93,6 @@ router.get('/stats', protect, async (req, res) => {
       if (req.user.role !== 'admin') {
         // Show productivity for tasks assigned by this user to others
         productivityQuery.assignedBy = req.user._id;
-        productivityQuery.isTeamTask = true;
       }
       if (startDate || endDate) {
         productivityQuery.createdAt = {};
@@ -103,6 +102,7 @@ router.get('/stats', protect, async (req, res) => {
 
       userProductivity = await Task.aggregate([
         { $match: productivityQuery },
+        { $match: req.user.role !== 'admin' ? { $expr: { $ne: ['$assignedTo', '$assignedBy'] } } : {} },
         { $group: {
           _id: '$assignedTo',
           total: { $sum: 1 },
@@ -155,7 +155,6 @@ router.get('/team-productivity', protect, async (req, res) => {
     const productivityQuery = { isDeleted: { $ne: true } };
     if (req.user.role !== 'admin') {
       productivityQuery.assignedBy = req.user._id;
-      productivityQuery.isTeamTask = true;
     } else {
       productivityQuery.isTeamTask = true;
     }
@@ -169,6 +168,7 @@ router.get('/team-productivity', protect, async (req, res) => {
 
     const userProductivity = await Task.aggregate([
       { $match: productivityQuery },
+      { $match: req.user.role !== 'admin' ? { $expr: { $ne: ['$assignedTo', '$assignedBy'] } } : {} },
       { $group: {
         _id: '$assignedTo',
         total: { $sum: 1 },
