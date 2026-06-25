@@ -17,11 +17,14 @@ interface AuthStore {
   user: User | null
   theme: 'light' | 'dark'
   sidebarOpen: boolean
+  readNotifications: string[]
   setAuth: (token: string, user: User) => void
   setUser: (user: User) => void
   logout: () => void
   toggleTheme: () => void
   setSidebarOpen: (open: boolean) => void
+  markNotificationRead: (id: string) => void
+  markAllNotificationsRead: (ids: string[]) => void
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -31,12 +34,19 @@ export const useAuthStore = create<AuthStore>()(
       user: null,
       theme: 'light',
       sidebarOpen: true,
+      readNotifications: [],
       setAuth: (token, user) => set({ token, user }),
       setUser: (user) => set({ user }),
       logout: () => set({ token: null, user: null }),
       toggleTheme: () => set((s) => ({ theme: s.theme === 'light' ? 'dark' : 'light' })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
+      markNotificationRead: (id) => set((s) => ({
+        readNotifications: s.readNotifications.includes(id) ? s.readNotifications : [...s.readNotifications, id]
+      })),
+      markAllNotificationsRead: (ids) => set((s) => ({
+        readNotifications: Array.from(new Set([...s.readNotifications, ...ids]))
+      })),
     }),
-    { name: 'auth-store', partialize: (s) => ({ token: s.token, user: s.user, theme: s.theme }) }
+    { name: 'auth-store', partialize: (s) => ({ token: s.token, user: s.user, theme: s.theme, readNotifications: s.readNotifications }) }
   )
 )
