@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createTask, updateTask, getSubordinates } from '@/lib/api'
 import { useAuthStore } from '@/lib/store'
 import { STATUSES, CATEGORIES, PRIORITIES } from '@/lib/constants'
+import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 
 interface Props {
@@ -161,7 +162,7 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
               {statusOnlyEdit ? (
                 <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.dueDate || '—'}</p>
               ) : (
-                <input type="date" className="input" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} required />
+                <input type="date" className="input" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} min={format(new Date(), 'yyyy-MM-dd')} required />
               )}
             </div>
           </div>
@@ -170,7 +171,7 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
           {!statusOnlyEdit && (
             <div>
               <label className="label">Due Time *</label>
-              <input type="time" className="input" value={form.dueTime} onChange={e => setForm(f => ({ ...f, dueTime: e.target.value }))} required />
+              <input type="time" className="input" value={form.dueTime} onChange={e => setForm(f => ({ ...f, dueTime: e.target.value }))} min={form.dueDate === format(new Date(), 'yyyy-MM-dd') ? format(new Date(), 'HH:mm') : undefined} required />
             </div>
           )}
           {statusOnlyEdit && (

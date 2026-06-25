@@ -83,6 +83,10 @@ export default function TaskTable({ tasks, showAssignee }: Props) {
                       {task.title}
                     </button>
                     {task.lockedByDone && <span className="text-xs text-slate-400">🔒</span>}
+                    {/* Self Assigned sticker */}
+                    {task.assignedBy?._id === task.assignedTo?._id && (
+                      <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">Self Assigned</span>
+                    )}
                     {/* Last chat message preview */}
                     {(() => {
                       const lastMsg = [...(task.comments || [])].reverse().find((c: any) => c.type === 'comment')
