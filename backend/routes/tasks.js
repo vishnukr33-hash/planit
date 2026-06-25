@@ -359,12 +359,28 @@ router.patch('/:id/restore', protect, async (req, res) => {
 // Add comment
 router.post('/:id/comments', protect, async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    const task = await Task.findById(req.params.id)
+      .populate('assignedTo', 'name username phone')
+      .populate('assignedBy', 'name username phone');
     if (!task) return res.status(404).json({ message: 'Task not found' });
     task.comments.push({ user: req.user._id, text: req.body.text, type: 'comment' });
     await task.save();
     await task.populate('comments.user', 'name username');
-    req.io?.to(task.assignedTo.toString()).emit('task:comment', { taskId: task._id, comment: task.comments.at(-1) });
+    req.io?.to(task.assignedTo._id.toString()).emit('task:comment', { taskId: task._id, comment: task.comments.at(-1) });
+
+    // Also emit to assignedBy if different
+    if (task.assignedBy && task.assignedBy._id.toString() !== task.assignedTo._id.toString()) {
+      req.io?.to(task.assignedBy._id.toString()).emit('task:comment', { taskId: task._id, comment: task.comments.at(-1) });
+    }
+
+    // Send WhatsApp notification to the other party
+    const { notifyChatMessage } = require('../utils/whatsapp');
+    const recipientIsAssignee = req.user._id.toString() !== task.assignedTo._id.toString();
+    const recipient = recipientIsAssignee ? task.assignedTo : task.assignedBy;
+    if (recipient?.phone) {
+      notifyChatMessage(recipient, task, req.user.name, req.body.text).catch(() => {});
+    }
+
     res.json(task);
   } catch (err) {
     res.status(500).json({ message: err.message });
