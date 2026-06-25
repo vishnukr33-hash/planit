@@ -91,8 +91,9 @@ router.get('/stats', protect, async (req, res) => {
     if (req.user.role === 'admin' || req.user.role === 'head' || req.user.role === 'teamlead') {
       const productivityQuery = { isDeleted: { $ne: true } };
       if (req.user.role !== 'admin') {
+        // Show productivity for tasks assigned by this user to others
         productivityQuery.assignedBy = req.user._id;
-        productivityQuery.assignedTo = { $ne: req.user._id };
+        productivityQuery.isTeamTask = true;
       }
       if (startDate || endDate) {
         productivityQuery.createdAt = {};
@@ -154,7 +155,7 @@ router.get('/team-productivity', protect, async (req, res) => {
     const productivityQuery = { isDeleted: { $ne: true } };
     if (req.user.role !== 'admin') {
       productivityQuery.assignedBy = req.user._id;
-      productivityQuery.assignedTo = { $ne: req.user._id };
+      productivityQuery.isTeamTask = true;
     } else {
       productivityQuery.isTeamTask = true;
     }
