@@ -9,10 +9,11 @@ cron.schedule('*/4 * * * *', async () => {
 });
 
 /**
- * TRIGGER 2: N-1 Day reminder at 9:00 AM
- * Sends WhatsApp + Email for tasks due TOMORROW (1 day before due date)
+ * TRIGGER 2: N-1 Day reminder at 9:00 AM IST
+ * Sends WhatsApp (task_pending template) + Email for tasks due TOMORROW
  */
-cron.schedule('0 9 * * *', async () => {
+cron.schedule('30 3 * * *', async () => {
+  // 3:30 UTC = 9:00 AM IST
   try {
     const tomorrow = new Date();
     tomorrow.setHours(0, 0, 0, 0);
@@ -23,14 +24,14 @@ cron.schedule('0 9 * * *', async () => {
     const tasks = await Task.find({
       dueDate: { $gte: tomorrow, $lt: dayAfter },
       status: { $nin: ['Done'] },
-      isTeamTask: true,
+      isDeleted: { $ne: true },
     }).populate('assignedTo', 'name email phone');
 
     for (const task of tasks) {
       if (!task.assignedTo) continue;
       const dueStr = new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
 
-      // WhatsApp — template: task_pending
+      // WhatsApp — task_pending template
       if (task.assignedTo.phone) {
         await notifyTaskPending(task.assignedTo, task).catch(() => {});
       }
@@ -57,7 +58,55 @@ cron.schedule('0 9 * * *', async () => {
 });
 
 /**
- * TRIGGER 3: N-1 Hour reminder (1 hour before due time)
+ * TRIGGER 3: After Due Date and Time — Every Day 9:00 AM IST
+ * Sends WhatsApp (task_late template) + Email for ALL overdue tasks daily
+ * This runs every day at 9 AM and notifies users about tasks that are past their due date
+ */
+cron.schedule('30 3 * * *', async () => {
+  // 3:30 UTC = 9:00 AM IST (runs alongside N-1 day but different query)
+  try {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    // Find all overdue tasks (due date in the past, not done)
+    const tasks = await Task.find({
+      dueDate: { $lt: now },
+      status: { $nin: ['Done'] },
+      isDeleted: { $ne: true },
+    }).populate('assignedTo', 'name email phone');
+
+    for (const task of tasks) {
+      if (!task.assignedTo) continue;
+      const dueStr = new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+
+      // WhatsApp — task_late template
+      if (task.assignedTo.phone) {
+        await notifyTaskLate(task.assignedTo, task).catch(() => {});
+      }
+
+      // Email
+      if (task.assignedTo.email) {
+        await sendEmail({
+          to: task.assignedTo.email,
+          subject: `Overdue: Task "${task.title}" is past due!`,
+          html: `<p>Hi ${task.assignedTo.name},</p>
+            <p><strong>Your task "${task.title}" is overdue.</strong></p>
+            <p><strong>Due Date:</strong> ${dueStr}</p>
+            <p><strong>Status:</strong> ${task.status}</p>
+            <p><strong>Priority:</strong> ${task.priority}</p>
+            <p>Please complete it or update the status in Planit immediately.</p>
+            <p><a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display:inline-block;background:#dc2626;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Open Planit</a></p>`
+        }).catch(() => {});
+      }
+    }
+    if (tasks.length > 0) console.log(`[Scheduler] Overdue Daily 9AM: Sent ${tasks.length} reminders`);
+  } catch (err) {
+    console.error('Scheduler error (overdue daily):', err);
+  }
+});
+
+/**
+ * N-1 Hour reminder (1 hour before due time)
  * Runs every 5 minutes, checks for tasks due in the next 60-65 minutes
  */
 cron.schedule('*/5 * * * *', async () => {
@@ -66,11 +115,10 @@ cron.schedule('*/5 * * * *', async () => {
     const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
     const fiveMinBuffer = new Date(now.getTime() + 65 * 60 * 1000);
 
-    // Find tasks due within the next 60-65 minutes that haven't had hour-reminder sent
     const tasks = await Task.find({
       dueDate: { $gte: oneHourLater, $lte: fiveMinBuffer },
       status: { $nin: ['Done'] },
-      isTeamTask: true,
+      isDeleted: { $ne: true },
       hourReminderSent: { $ne: true },
     }).populate('assignedTo', 'name email phone');
 
@@ -78,9 +126,9 @@ cron.schedule('*/5 * * * *', async () => {
       if (!task.assignedTo) continue;
       const dueTime = new Date(task.dueDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-      // WhatsApp — template: task_late
+      // WhatsApp — task_pending template (1 hour warning)
       if (task.assignedTo.phone) {
-        await notifyTaskLate(task.assignedTo, task).catch(() => {});
+        await notifyTaskPending(task.assignedTo, task).catch(() => {});
       }
 
       // Email
@@ -97,7 +145,7 @@ cron.schedule('*/5 * * * *', async () => {
         }).catch(() => {});
       }
 
-      // Mark hour reminder sent so we don't re-send
+      // Mark hour reminder sent
       task.hourReminderSent = true;
       await task.save();
     }
@@ -111,7 +159,6 @@ cron.schedule('*/5 * * * *', async () => {
 cron.schedule('0 0 * * *', async () => {
   await Task.updateMany({ hourReminderSent: true }, { hourReminderSent: false });
 });
-
 
 // Auto-purge deleted tasks older than 6 months — runs daily at 2 AM
 cron.schedule('0 2 * * *', async () => {

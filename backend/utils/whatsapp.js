@@ -79,71 +79,44 @@ async function sendTextMessage(phone, message) {
   }
 }
 
+// === TEMPLATE IDS ===
+const TEMPLATE_NEW_TASK = '28160587806875627';      // new_task - At time of task assigning
+const TEMPLATE_TASK_PENDING = '1057554603269663';   // task_pending - N-1 Day before due date
+const TEMPLATE_TASK_LATE = '2056861468282029';      // task_late - After due date, daily 9 AM
+
 // === NOTIFICATION FUNCTIONS ===
 
+// Trigger 1: At the time of Task Assigning (new_task template)
 async function notifyTaskAssigned(user, task, assignedByName) {
   const dueStr = task.dueDate
     ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
     : 'No due date';
 
-  // Try template first
-  const result = await sendGupshupTemplate(user.phone, '28160587806875627', [
+  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, [
     user.name, task.title, task.priority, dueStr, assignedByName
   ]);
-
-  // Fallback to text message if template fails
-  if (!result) {
-    await sendTextMessage(user.phone,
-      `📋 *New Task Assigned*\n\nHi ${user.name},\n\n` +
-      `*Task:* ${task.title}\n` +
-      `*Priority:* ${task.priority}\n` +
-      `*Due:* ${dueStr}\n` +
-      `*Assigned by:* ${assignedByName}\n\n` +
-      `Please login to Planit to start working on it.`
-    );
-  }
 }
 
+// Trigger 2: N-1 Day of Task Due Date (task_pending template)
 async function notifyTaskPending(user, task) {
   const dueStr = task.dueDate
     ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
     : 'N/A';
 
-  const result = await sendGupshupTemplate(user.phone, '1057554603269663', [
+  return sendGupshupTemplate(user.phone, TEMPLATE_TASK_PENDING, [
     user.name, task.title, dueStr, task.status, task.priority
   ]);
-
-  if (!result) {
-    await sendTextMessage(user.phone,
-      `⏰ *Task Reminder*\n\nHi ${user.name},\n\n` +
-      `*Task:* ${task.title}\n` +
-      `*Due:* ${dueStr}\n` +
-      `*Status:* ${task.status}\n` +
-      `*Priority:* ${task.priority}\n\n` +
-      `Please update the task status in Planit.`
-    );
-  }
 }
 
+// Trigger 3: After Due Date and Time - Every Day 9:00 AM (task_late template)
 async function notifyTaskLate(user, task) {
-  const dueTime = task.dueDate
-    ? new Date(task.dueDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+  const dueStr = task.dueDate
+    ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
     : 'N/A';
 
-  const result = await sendGupshupTemplate(user.phone, '2056861468282029', [
-    user.name, task.title, dueTime, task.status, task.priority
+  return sendGupshupTemplate(user.phone, TEMPLATE_TASK_LATE, [
+    user.name, task.title, dueStr, task.status, task.priority
   ]);
-
-  if (!result) {
-    await sendTextMessage(user.phone,
-      `🚨 *Urgent: Task Due in 1 Hour!*\n\nHi ${user.name},\n\n` +
-      `*Task:* ${task.title}\n` +
-      `*Due at:* ${dueTime}\n` +
-      `*Status:* ${task.status}\n` +
-      `*Priority:* ${task.priority}\n\n` +
-      `Please complete it immediately or update the status.`
-    );
-  }
 }
 
 async function notifyReminder(user, task, type) {
