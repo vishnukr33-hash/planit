@@ -235,7 +235,7 @@ export default function DashboardPage() {
           <KPICard label="Need Discussion" value={kpis.needDiscussion || 0} icon="💬" color="bg-purple-50 dark:bg-purple-900/20" onClick={() => router.push(basePath + '?status=Need+Discussion')} />
           <KPICard label="Completed" value={kpis.completed || 0} icon="✅" color="bg-green-50 dark:bg-green-900/20" onClick={() => router.push(basePath + '?status=Done')} />
           <KPICard label="Overdue" value={kpis.overdue || 0} icon="⚠️" color="bg-red-50 dark:bg-red-900/20" onClick={() => router.push(basePath + '?filter=overdue')} />
-          <KPICard label="Delayed" value={kpis.delayed || 0} icon="⏰" color="bg-orange-50 dark:bg-orange-900/20" onClick={() => router.push(basePath + '?status=Delayed')} />
+          <KPICard label="Productivity" value={`${kpis.productivity || 0}%`} icon="📊" color="bg-emerald-50 dark:bg-emerald-900/20" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
