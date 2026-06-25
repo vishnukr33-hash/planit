@@ -36,6 +36,8 @@ export default function TaskDetailModal({ task, onClose, onEdit }: { task: any; 
   const refresh = (updated: any) => {
     setLocalTask(updated)
     qc.invalidateQueries({ queryKey: ['tasks'] })
+    qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+    qc.invalidateQueries({ queryKey: ['team-productivity'] })
   }
 
   const commentMutation = useMutation({

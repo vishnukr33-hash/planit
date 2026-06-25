@@ -94,11 +94,6 @@ router.get('/stats', protect, async (req, res) => {
         // Show productivity for tasks assigned by this user to others
         productivityQuery.assignedBy = req.user._id;
       }
-      if (startDate || endDate) {
-        productivityQuery.createdAt = {};
-        if (startDate) productivityQuery.createdAt.$gte = new Date(startDate);
-        if (endDate) productivityQuery.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
-      }
 
       userProductivity = await Task.aggregate([
         { $match: productivityQuery },

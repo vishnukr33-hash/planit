@@ -24,7 +24,12 @@ export default function TaskTable({ tasks, showAssignee }: Props) {
 
   const deleteMutation = useMutation({
     mutationFn: deleteTask,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tasks'] }); toast.success('Task deleted') },
+    onSuccess: () => { 
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      qc.invalidateQueries({ queryKey: ['trash-tasks'] })
+      toast.success('Task deleted') 
+    },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to delete'),
   })
 
