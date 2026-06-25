@@ -5,6 +5,7 @@ import { getTasks, exportTasks } from '@/lib/api'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import TaskTable from '@/components/tasks/TaskTable'
 import TaskModal from '@/components/tasks/TaskModal'
+import TaskDetailModal from '@/components/tasks/TaskDetailModal'
 import DateFilter from '@/components/layout/DateFilter'
 import { STATUSES, CATEGORIES, PRIORITIES } from '@/lib/constants'
 import { useAuthStore } from '@/lib/store'
@@ -150,6 +151,15 @@ export default function MyTasksPage() {
       </div>
 
       {showModal && <TaskModal onClose={() => setShowModal(false)} />}
+
+      {/* Auto-open task detail when navigated from notification */}
+      {viewTaskId && data?.tasks && (() => {
+        const targetTask = data.tasks.find((t: any) => t._id === viewTaskId)
+        if (targetTask) {
+          return <TaskDetailModal task={targetTask} onClose={() => setViewTaskId(null)} onEdit={() => setViewTaskId(null)} />
+        }
+        return null
+      })()}
     </DashboardLayout>
   )
 }
