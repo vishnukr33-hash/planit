@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getDashboardStats } from '@/lib/api'
 import DashboardLayout from '@/components/layout/DashboardLayout'
-import DateFilter from '@/components/DateFilter'
+import DateFilter from '@/components/layout/DateFilter'
 import {
   Chart as ChartJS,
   ArcElement,
