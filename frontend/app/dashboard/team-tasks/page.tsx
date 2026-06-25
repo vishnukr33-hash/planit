@@ -42,8 +42,8 @@ export default function TeamTasksPage() {
       isTeamTask: true,
       ...(statusFilter ? { status: statusFilter } : {}),
       ...(filterType ? { filter: filterType } : {}),
-      ...(dateRange.startDate ? { startDate: dateRange.startDate } : {}),
-      ...(dateRange.endDate ? { endDate: dateRange.endDate } : {}),
+      ...(!statusFilter && !filterType && dateRange.startDate ? { startDate: dateRange.startDate } : {}),
+      ...(!statusFilter && !filterType && dateRange.endDate ? { endDate: dateRange.endDate } : {}),
     }).then(r => r.data),
   })
 
