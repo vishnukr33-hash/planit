@@ -12,17 +12,35 @@ router.get('/', protect, async (req, res) => {
     const nextWeek = new Date(today);
     nextWeek.setDate(nextWeek.getDate() + 7);
 
-    const baseQuery = req.user.role === 'admin' ? {} : { assignedTo: req.user._id };
+    let baseQuery = { isDeleted: { $ne: true } };
+    if (req.user.role === 'admin') {
+      // Admin sees all
+    } else if (req.user.role === 'head' || req.user.role === 'teamlead') {
+      // Head/TeamLead sees their own tasks + tasks they assigned
+      baseQuery.$or = [
+        { assignedTo: req.user._id },
+        { assignedBy: req.user._id }
+      ];
+    } else {
+      baseQuery.assignedTo = req.user._id;
+    }
 
     const [dueToday, overdue, upcoming, recentComments] = await Promise.all([
       Task.find({ ...baseQuery, dueDate: { $gte: today, $lt: tomorrow }, status: { $ne: 'Done' } })
-        .populate('assignedTo', 'name username').populate('assignedBy', 'name username'),
+        .populate('assignedTo', 'name username')
+        .populate('assignedBy', 'name username')
+        .populate('comments.user', 'name username'),
       Task.find({ ...baseQuery, dueDate: { $lt: today }, status: { $nin: ['Done'] } })
-        .populate('assignedTo', 'name username').populate('assignedBy', 'name username'),
+        .populate('assignedTo', 'name username')
+        .populate('assignedBy', 'name username')
+        .populate('comments.user', 'name username'),
       Task.find({ ...baseQuery, dueDate: { $gte: tomorrow, $lte: nextWeek }, status: { $ne: 'Done' } })
-        .populate('assignedTo', 'name username').populate('assignedBy', 'name username'),
+        .populate('assignedTo', 'name username')
+        .populate('assignedBy', 'name username')
+        .populate('comments.user', 'name username'),
       Task.find({ ...baseQuery, 'comments.0': { $exists: true } })
         .populate('assignedTo', 'name username')
+        .populate('assignedBy', 'name username')
         .populate('comments.user', 'name username')
         .sort({ updatedAt: -1 }).limit(10)
     ]);
