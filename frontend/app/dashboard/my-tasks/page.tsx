@@ -15,6 +15,7 @@ export default function MyTasksPage() {
   const { user } = useAuthStore()
   const searchParams = useSearchParams()
   const [showModal, setShowModal] = useState(false)
+  const [viewTaskId, setViewTaskId] = useState<string | null>(searchParams.get('taskId'))
 
   // Date range state
   const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({ startDate: '', endDate: '' })
@@ -45,8 +46,11 @@ export default function MyTasksPage() {
   if (filters.filter === 'overdue') {
     queryParams.filter = 'overdue'
   }
-  if (dateRange.startDate) queryParams.startDate = dateRange.startDate
-  if (dateRange.endDate) queryParams.endDate = dateRange.endDate
+  // Only apply date filter if no status/overdue filter from navigation
+  if (!filters.status && !filters.filter) {
+    if (dateRange.startDate) queryParams.startDate = dateRange.startDate
+    if (dateRange.endDate) queryParams.endDate = dateRange.endDate
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['tasks', 'my', filters, dateRange],
@@ -113,6 +117,15 @@ export default function MyTasksPage() {
             <option value="">All Priority</option>
             {PRIORITIES.map(p => <option key={p}>{p}</option>)}
           </select>
+          {/* Clear Filters */}
+          {(filters.status || filters.category || filters.priority || filters.search || filters.filter) && (
+            <button
+              onClick={() => setFilters({ status: '', category: '', priority: '', search: '', filter: '' })}
+              className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            >
+              ✕ Clear Filters
+            </button>
+          )}
           <div className="flex-1" />
           <button onClick={handleExport} className="btn-secondary flex items-center gap-2 text-sm">
             📥 Export Excel
