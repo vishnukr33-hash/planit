@@ -45,6 +45,32 @@ router.get('/stats', protect, async (req, res) => {
 
     const openTaskStatuses = ['Pending', 'In Progress', 'Need Discussion', 'Delayed'];
 
+    // Productivity KPI: role-based personal productivity
+    // Head: own tasks (self-assigned)
+    // TeamLead: tasks assigned to them by Head
+    // User: tasks assigned to them by TeamLead
+    let productivityBaseQuery = { isDeleted: { $ne: true }, assignedTo: req.user._id };
+    if (req.user.role === 'head') {
+      // Head productivity = self-assigned tasks only
+      productivityBaseQuery.assignedBy = req.user._id;
+    } else if (req.user.role === 'teamlead') {
+      // TeamLead productivity = tasks assigned by Head (their parent)
+      if (req.user.parentId) {
+        productivityBaseQuery.assignedBy = req.user.parentId;
+      }
+    } else if (req.user.role === 'user') {
+      // User productivity = tasks assigned by TeamLead (their parent)
+      if (req.user.parentId) {
+        productivityBaseQuery.assignedBy = req.user.parentId;
+      }
+    }
+
+    const [prodTotal, prodCompleted] = await Promise.all([
+      Task.countDocuments(productivityBaseQuery),
+      Task.countDocuments({ ...productivityBaseQuery, status: 'Done' }),
+    ]);
+    const personalProductivity = prodTotal > 0 ? Math.round((prodCompleted / prodTotal) * 100) : 0;
+
     const [total, open, pending, completed, overdue, dueToday, inProgress, needDiscussion, delayed, totalUsers] = await Promise.all([
       Task.countDocuments(baseQuery),
       Task.countDocuments({ ...baseQuery, status: { $in: openTaskStatuses } }),
@@ -58,7 +84,7 @@ router.get('/stats', protect, async (req, res) => {
       req.user.role === 'admin' ? User.countDocuments({ role: 'user', status: 'active' }) : 0
     ]);
 
-    const productivity = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const productivity = personalProductivity;
 
     // Category distribution
     const categoryStats = await Task.aggregate([
