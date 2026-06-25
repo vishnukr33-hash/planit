@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getReminders, getTask } from '@/lib/api'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import TaskDetailModal from '@/components/tasks/TaskDetailModal'
+import TaskModal from '@/components/tasks/TaskModal'
 import { STATUS_COLORS, PRIORITY_COLORS } from '@/lib/constants'
 import { format } from 'date-fns'
 import clsx from 'clsx'
@@ -142,6 +143,11 @@ export default function RemindersPage() {
           onClose={() => setSelectedTask(null)}
           onEdit={() => { setEditTask(selectedTask); setSelectedTask(null) }}
         />
+      )}
+
+      {/* Edit Task Modal */}
+      {editTask && (
+        <TaskModal task={editTask} onClose={() => setEditTask(null)} />
       )}
     </DashboardLayout>
   )
