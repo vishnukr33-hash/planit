@@ -45,7 +45,7 @@ export default function Header({ title }: { title?: string }) {
   const handleNotifClick = (notif: any) => {
     markNotificationRead(notif.id)
     setNotifOpen(false)
-    // Navigate to my-tasks with the task highlighted via query param
+    // Navigate to my-tasks with taskId to auto-open the task detail
     router.push(`/dashboard/my-tasks?taskId=${notif.taskId}`)
   }
 

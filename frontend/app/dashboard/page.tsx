@@ -98,10 +98,7 @@ export default function DashboardPage() {
 
   const kpis = data?.kpis || {}
 
-  const basePath =
-    user?.role === 'admin' || user?.role === 'head' || user?.role === 'teamlead'
-      ? '/dashboard/team-tasks'
-      : '/dashboard/my-tasks'
+  const basePath = '/dashboard/my-tasks'
 
   // Build trend data based on date range or last 7 days
   const trendDays = dateRange.startDate && dateRange.endDate

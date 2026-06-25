@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getTasks, exportTasks } from '@/lib/api'
+import { getTasks, getTask, exportTasks } from '@/lib/api'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import TaskTable from '@/components/tasks/TaskTable'
 import TaskModal from '@/components/tasks/TaskModal'
@@ -16,7 +16,7 @@ export default function MyTasksPage() {
   const { user } = useAuthStore()
   const searchParams = useSearchParams()
   const [showModal, setShowModal] = useState(false)
-  const [viewTaskId, setViewTaskId] = useState<string | null>(searchParams.get('taskId'))
+  const [viewTask, setViewTask] = useState<any>(null)
 
   // Date range state
   const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({ startDate: '', endDate: '' })
@@ -27,16 +27,26 @@ export default function MyTasksPage() {
     category: '',
     priority: '',
     search: '',
-    filter: searchParams.get('filter') || '', // 'overdue'
+    filter: searchParams.get('filter') || '',
   })
 
-  // Sync if URL params change (e.g. back-navigation)
+  // Sync if URL params change
   useEffect(() => {
     setFilters(f => ({
       ...f,
       status: searchParams.get('status') || '',
       filter: searchParams.get('filter') || '',
     }))
+  }, [searchParams])
+
+  // Open task detail if taskId in URL (from notification click)
+  useEffect(() => {
+    const taskId = searchParams.get('taskId')
+    if (taskId) {
+      getTask(taskId).then(res => {
+        setViewTask(res.data)
+      }).catch(() => {})
+    }
   }, [searchParams])
 
   const queryParams: Record<string, any> = {
@@ -83,6 +93,10 @@ export default function MyTasksPage() {
     }
   }
 
+  const clearAllFilters = () => {
+    setFilters({ status: '', category: '', priority: '', search: '', filter: '' })
+  }
+
   return (
     <DashboardLayout title="My Tasks">
       <div className="space-y-4">
@@ -96,7 +110,7 @@ export default function MyTasksPage() {
           <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-sm text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
             <span>🔎 Filtered by: <strong>{activeFilterLabel}</strong></span>
             <button
-              onClick={() => setFilters(f => ({ ...f, status: '', filter: '' }))}
+              onClick={clearAllFilters}
               className="ml-auto text-blue-400 hover:text-blue-600 font-bold"
             >✕ Clear</button>
           </div>
@@ -118,15 +132,13 @@ export default function MyTasksPage() {
             <option value="">All Priority</option>
             {PRIORITIES.map(p => <option key={p}>{p}</option>)}
           </select>
-          {/* Clear Filters */}
-          {(filters.status || filters.category || filters.priority || filters.search || filters.filter) && (
-            <button
-              onClick={() => setFilters({ status: '', category: '', priority: '', search: '', filter: '' })}
-              className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-            >
-              ✕ Clear Filters
-            </button>
-          )}
+          {/* Clear Filters button - always visible */}
+          <button
+            onClick={clearAllFilters}
+            className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 hover:border-red-200 transition-colors"
+          >
+            ✕ Clear Filters
+          </button>
           <div className="flex-1" />
           <button onClick={handleExport} className="btn-secondary flex items-center gap-2 text-sm">
             📥 Export Excel
@@ -151,15 +163,7 @@ export default function MyTasksPage() {
       </div>
 
       {showModal && <TaskModal onClose={() => setShowModal(false)} />}
-
-      {/* Auto-open task detail when navigated from notification */}
-      {viewTaskId && data?.tasks && (() => {
-        const targetTask = data.tasks.find((t: any) => t._id === viewTaskId)
-        if (targetTask) {
-          return <TaskDetailModal task={targetTask} onClose={() => setViewTaskId(null)} onEdit={() => setViewTaskId(null)} />
-        }
-        return null
-      })()}
+      {viewTask && <TaskDetailModal task={viewTask} onClose={() => setViewTask(null)} onEdit={() => setViewTask(null)} />}
     </DashboardLayout>
   )
 }
