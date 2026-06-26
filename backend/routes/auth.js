@@ -72,10 +72,14 @@ router.put('/email-settings', protect, async (req, res) => {
 // Update own profile (any logged-in user)
 router.put('/profile', protect, async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { phone, avatar } = req.body;
+    const updateData = {};
+    if (phone !== undefined) updateData.phone = phone;
+    if (avatar !== undefined) updateData.avatar = avatar;
+
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { phone },
+      updateData,
       { new: true, runValidators: true }
     );
     res.json(user);
