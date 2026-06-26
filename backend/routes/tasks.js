@@ -69,20 +69,52 @@ router.get('/export/excel', protect, async (req, res) => {
     const tasks = await Task.find(query)
       .populate('assignedTo', 'name employeeCode')
       .populate('assignedBy', 'name')
+      .populate('completedBy', 'name')
       .sort({ createdAt: -1 });
 
-    // Generate CSV
-    const headers = 'Title,Description,Status,Category,Priority,Due Date,Due Time,Assigned To,Assigned By,Created At\n';
+    // Generate CSV with Completion Date & Time columns
+    const headers = 'Title,Description,Status,Category,Priority,Due Date,Due Time,Assigned To,Assigned By,Created At,Completion Date,Completion Time\n';
     const rows = tasks.map(t => {
       const due = t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-IN') : '';
       const dueTime = t.dueDate ? new Date(t.dueDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
       const created = new Date(t.createdAt).toLocaleString('en-IN');
-      return `"${(t.title || '').replace(/"/g, '""')}","${(t.description || '').replace(/"/g, '""')}","${t.status}","${t.category}","${t.priority}","${due}","${dueTime}","${t.assignedTo?.name || ''}","${t.assignedBy?.name || ''}","${created}"`;
+      const completionDate = t.completedAt ? new Date(t.completedAt).toLocaleDateString('en-IN') : '';
+      const completionTime = t.completedAt ? new Date(t.completedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+      return `"${(t.title || '').replace(/"/g, '""')}","${(t.description || '').replace(/"/g, '""')}","${t.status}","${t.category}","${t.priority}","${due}","${dueTime}","${t.assignedTo?.name || ''}","${t.assignedBy?.name || ''}","${created}","${completionDate}","${completionTime}"`;
     }).join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=planit-tasks.csv');
     res.send(headers + rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Get tasks with chats (for Chats sidebar page)
+router.get('/chats/list', protect, async (req, res) => {
+  try {
+    const query = { isDeleted: { $ne: true }, 'comments.0': { $exists: true } };
+
+    if (req.user.role === 'admin') {
+      // admin sees all
+    } else if (req.user.role === 'head' || req.user.role === 'teamlead') {
+      query.$or = [
+        { assignedTo: req.user._id },
+        { assignedBy: req.user._id }
+      ];
+    } else {
+      query.assignedTo = req.user._id;
+    }
+
+    const tasks = await Task.find(query)
+      .populate('assignedTo', 'name username')
+      .populate('assignedBy', 'name username')
+      .populate('comments.user', 'name username')
+      .sort({ updatedAt: -1 })
+      .limit(50);
+
+    res.json({ tasks });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -258,6 +290,12 @@ router.put('/:id', protect, async (req, res) => {
     }
 
     const prevStatus = task.status;
+
+    // Capture completion data when status changes to Done
+    if (updateData.status === 'Done' && prevStatus !== 'Done') {
+      updateData.completedAt = new Date();
+      updateData.completedBy = req.user._id;
+    }
 
     if (updateData.status && updateData.status !== prevStatus) {
       await Task.findByIdAndUpdate(req.params.id, {
@@ -441,6 +479,7 @@ router.patch('/:id/complete', protect, async (req, res) => {
     });
     task.status = 'Done';
     task.completedAt = new Date();
+    task.completedBy = req.user._id;
     if (task.isTeamTask) task.lockedByDone = true;
     await task.save();
     await task.populate('assignedTo', 'name username');

@@ -55,6 +55,7 @@ function SocketProvider({ children }: { children: React.ReactNode }) {
     socket.on('task:comment', () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['reminders'] })
+      queryClient.invalidateQueries({ queryKey: ['chats'] })
     })
 
     return () => {

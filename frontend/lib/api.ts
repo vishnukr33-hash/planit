@@ -52,6 +52,7 @@ export const deleteUser = (id: string) => api.delete(`/users/${id}`)
 // Tasks
 export const getTasks = (params?: object) => api.get('/tasks', { params })
 export const getTask = (id: string) => api.get(`/tasks/${id}`)
+export const getChats = () => api.get('/tasks/chats/list')
 export const createTask = (data: object) => api.post('/tasks', data)
 export const updateTask = (id: string, data: object) => api.put(`/tasks/${id}`, data)
 export const deleteTask = (id: string) => api.delete(`/tasks/${id}`)

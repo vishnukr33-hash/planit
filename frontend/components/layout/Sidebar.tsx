@@ -3,12 +3,15 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/lib/store'
+import { useQuery } from '@tanstack/react-query'
+import { getChats } from '@/lib/api'
 import clsx from 'clsx'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: '⊞' },
   { href: '/dashboard/my-tasks', label: 'My Tasks', icon: '✓' },
   { href: '/dashboard/team-tasks', label: 'Team Tasks', icon: '👥' },
+  { href: '/dashboard/chats', label: 'Chats', icon: '💬' },
   { href: '/dashboard/reminders', label: 'Reminders', icon: '🔔' },
   { href: '/dashboard/deleted', label: 'Deleted', icon: '🗑️' },
   { href: '/dashboard/users', label: 'Add User', icon: '➕', roles: ['admin', 'head', 'teamlead'] },
@@ -16,7 +19,21 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const { user, sidebarOpen, setSidebarOpen } = useAuthStore()
+  const { user, sidebarOpen, setSidebarOpen, readNotifications } = useAuthStore()
+
+  // Fetch chats to get unread count
+  const { data: chatsData } = useQuery({
+    queryKey: ['chats'],
+    queryFn: () => getChats().then(r => r.data),
+    refetchInterval: 30000,
+  })
+
+  // Count tasks with unread chats
+  const unreadChatCount = (chatsData?.tasks || []).filter((task: any) => {
+    if (readNotifications.includes(`chat-${task._id}`)) return false
+    const comments = (task.comments || []).filter((c: any) => c.type === 'comment')
+    return comments.some((c: any) => c.user?._id !== user?._id)
+  }).length
 
   return (
     <>
@@ -50,13 +67,18 @@ export default function Sidebar() {
           {navItems.filter(item => !item.roles || item.roles.includes(user?.role || '')).map(item => (
             <Link key={item.href} href={item.href}
               className={clsx(
-                'flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-colors text-sm font-medium',
+                'flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-colors text-sm font-medium relative',
                 pathname === item.href
                   ? 'bg-blue-600 text-white'
                   : 'text-slate-300 hover:bg-white/10 hover:text-white'
               )}>
               <span className="text-base flex-shrink-0">{item.icon}</span>
               {sidebarOpen && <span>{item.label}</span>}
+              {item.href === '/dashboard/chats' && unreadChatCount > 0 && (
+                <span className="absolute top-2 right-3 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {unreadChatCount > 9 ? '9+' : unreadChatCount}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
