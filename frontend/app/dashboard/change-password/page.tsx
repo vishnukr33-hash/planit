@@ -61,6 +61,59 @@ export default function ChangePasswordPage() {
     <DashboardLayout title="My Profile">
       <div className="max-w-md mx-auto space-y-5">
 
+        {/* Profile Image */}
+        <div className="card p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 bg-violet-100 dark:bg-violet-900/30 rounded-xl flex items-center justify-center text-xl">🖼️</div>
+            <div>
+              <h2 className="font-semibold">Profile Picture</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Visible in chat, comments, and headers</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold overflow-hidden flex-shrink-0">
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                user?.name?.[0]?.toUpperCase()
+              )}
+            </div>
+            <div className="flex-1 space-y-2">
+              <div>
+                <label className="label text-xs">Image URL (paste a link)</label>
+                <input
+                  className="input text-sm"
+                  type="url"
+                  placeholder="https://example.com/photo.jpg"
+                  defaultValue={user?.avatar || ''}
+                  onBlur={e => {
+                    const val = e.target.value.trim()
+                    if (val !== (user?.avatar || '')) {
+                      updateProfile({ avatar: val }).then(res => {
+                        setUser({ ...user!, avatar: res.data.avatar })
+                        toast.success('Profile picture updated')
+                      }).catch(() => toast.error('Failed to update'))
+                    }
+                  }}
+                />
+              </div>
+              {user?.avatar && (
+                <button
+                  onClick={() => {
+                    updateProfile({ avatar: '' }).then(res => {
+                      setUser({ ...user!, avatar: '' })
+                      toast.success('Profile picture removed')
+                    }).catch(() => toast.error('Failed to remove'))
+                  }}
+                  className="text-xs text-red-500 hover:underline"
+                >
+                  Remove picture
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Phone / WhatsApp */}
         <div className="card p-6">
           <div className="flex items-center gap-3 mb-5">
