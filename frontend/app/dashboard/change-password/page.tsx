@@ -71,32 +71,43 @@ export default function ChangePasswordPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold overflow-hidden flex-shrink-0">
+            <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold overflow-hidden flex-shrink-0 relative group">
               {user?.avatar ? (
                 <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
               ) : (
                 user?.name?.[0]?.toUpperCase()
               )}
-            </div>
-            <div className="flex-1 space-y-2">
-              <div>
-                <label className="label text-xs">Image URL (paste a link)</label>
+              <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-full">
+                <span className="text-white text-xs font-medium">📷 Change</span>
                 <input
-                  className="input text-sm"
-                  type="url"
-                  placeholder="https://example.com/photo.jpg"
-                  defaultValue={user?.avatar || ''}
-                  onBlur={e => {
-                    const val = e.target.value.trim()
-                    if (val !== (user?.avatar || '')) {
-                      updateProfile({ avatar: val }).then(res => {
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    if (file.size > 500 * 1024) {
+                      toast.error('Image must be under 500KB')
+                      return
+                    }
+                    const reader = new FileReader()
+                    reader.onload = () => {
+                      const base64 = reader.result as string
+                      updateProfile({ avatar: base64 }).then(res => {
                         setUser({ ...user!, avatar: res.data.avatar })
                         toast.success('Profile picture updated')
-                      }).catch(() => toast.error('Failed to update'))
+                      }).catch(() => toast.error('Failed to upload'))
                     }
+                    reader.readAsDataURL(file)
                   }}
                 />
-              </div>
+              </label>
+            </div>
+            <div className="flex-1 space-y-2">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Hover the avatar and click to upload a photo from your device.
+              </p>
+              <p className="text-xs text-slate-400">Max size: 500KB · JPG, PNG, or WebP</p>
               {user?.avatar && (
                 <button
                   onClick={() => {
@@ -107,7 +118,7 @@ export default function ChangePasswordPage() {
                   }}
                   className="text-xs text-red-500 hover:underline"
                 >
-                  Remove picture
+                  ✕ Remove picture
                 </button>
               )}
             </div>
