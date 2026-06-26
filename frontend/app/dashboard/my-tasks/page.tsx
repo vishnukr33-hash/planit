@@ -157,7 +157,12 @@ export default function MyTasksPage() {
           {isLoading ? (
             <div className="flex justify-center py-12"><div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>
           ) : (
-            <TaskTable tasks={data?.tasks || []} />
+            <TaskTable tasks={
+              // Hide Done tasks from default view; show when explicitly filtered by status=Done
+              (!filters.status && !filters.filter)
+                ? (data?.tasks || []).filter((t: any) => t.status !== 'Done')
+                : (data?.tasks || [])
+            } />
           )}
         </div>
       </div>

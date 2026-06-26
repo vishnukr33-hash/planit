@@ -10,6 +10,7 @@ interface User {
   role: 'admin' | 'head' | 'teamlead' | 'user'
   status: string
   phone?: string
+  avatar?: string
 }
 
 interface ChatPopupData {
