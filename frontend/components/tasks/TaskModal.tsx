@@ -14,7 +14,7 @@ interface Props {
   isTeamTask?: boolean
 }
 
-export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
+export default function TaskModal({ task, onClose, defaultAssignTo, isTeamTask }: Props) {
   const { user } = useAuthStore()
   const qc = useQueryClient()
   const isEdit = !!task
@@ -70,6 +70,7 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
     if (!form.title.trim()) return toast.error('Title is required')
     if (!form.dueDate) return toast.error('Due Date is required')
     if (!form.dueTime) return toast.error('Due Time is required')
+    if (isTeamTask && !form.assignedTo) return toast.error('Please select a team member')
     const payload: any = {
       title: form.title,
       description: form.description,
@@ -186,9 +187,13 @@ export default function TaskModal({ task, onClose, defaultAssignTo }: Props) {
           {/* Assign To — read-only for status-only edit */}
           {canAssign && !statusOnlyEdit && (
             <div>
-              <label className="label">Assign To</label>
+              <label className="label">{isTeamTask ? 'Assign To Team Member *' : 'Assign To'}</label>
               <select className="input" value={form.assignedTo} onChange={e => setForm(f => ({ ...f, assignedTo: e.target.value }))}>
-                <option value="">Self</option>
+                {isTeamTask ? (
+                  <option value="">-- Select Team Member --</option>
+                ) : (
+                  <option value="">Self</option>
+                )}
                 {usersData?.users?.map((u: any) => (
                   <option key={u._id} value={u._id}>{u.name} ({u.employeeCode})</option>
                 ))}
