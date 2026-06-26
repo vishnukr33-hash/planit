@@ -107,7 +107,8 @@ export default function ChangePasswordPage() {
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 Hover the avatar and click to upload a photo from your device.
               </p>
-              <p className="text-xs text-slate-400">Max size: 500KB · JPG, PNG, or WebP</p>
+              <p className="text-xs text-slate-400">📎 Max size: 500KB · Formats: JPG, PNG, or WebP</p>
+              <p className="text-xs text-slate-400">📐 Recommended: 200×200 pixels or larger (square)</p>
               {user?.avatar && (
                 <button
                   onClick={() => {
