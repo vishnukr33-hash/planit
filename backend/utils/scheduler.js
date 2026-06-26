@@ -173,3 +173,71 @@ cron.schedule('0 2 * * *', async () => {
     console.error('Scheduler error (auto-purge):', err);
   }
 });
+
+/**
+ * RECURRING TASKS: Create next month's task
+ * Runs daily at 12:01 AM — checks for recurring tasks whose nextOccurrence has arrived
+ */
+cron.schedule('1 0 * * *', async () => {
+  try {
+    const now = new Date();
+
+    // Find recurring tasks where nextOccurrence is today or in the past (need to create the next one)
+    const recurringTasks = await Task.find({
+      isRecurring: true,
+      recurrenceActive: true,
+      recurrenceType: 'monthly',
+      nextOccurrence: { $lte: now },
+      isDeleted: { $ne: true },
+    });
+
+    for (const task of recurringTasks) {
+      try {
+        // Create the new monthly occurrence
+        const newDueDate = new Date(task.nextOccurrence);
+        const newTask = await Task.create({
+          title: task.title,
+          description: task.description,
+          category: task.category,
+          priority: task.priority,
+          dueDate: newDueDate,
+          assignedTo: task.assignedTo,
+          assignedBy: task.assignedBy,
+          isTeamTask: task.isTeamTask,
+          status: task.isTeamTask ? 'In Progress' : 'Pending',
+          isRecurring: true,
+          recurrenceType: 'monthly',
+          recurrenceActive: true,
+          parentTaskId: task.parentTaskId || task._id,
+          nextOccurrence: new Date(newDueDate.getFullYear(), newDueDate.getMonth() + 1, newDueDate.getDate(), newDueDate.getHours(), newDueDate.getMinutes()),
+        });
+
+        // Update the original task: move nextOccurrence forward and deactivate recurrence on this instance
+        task.recurrenceActive = false;
+        task.nextOccurrence = null;
+        await task.save();
+
+        console.log(`[Scheduler] Recurring: Created next occurrence of "${task.title}" due ${newDueDate.toLocaleDateString()}`);
+
+        // Send notifications for the new task
+        const populatedTask = await Task.findById(newTask._id)
+          .populate('assignedTo', 'name email phone')
+          .populate('assignedBy', 'name');
+
+        if (populatedTask.assignedTo && populatedTask.assignedTo._id.toString() !== populatedTask.assignedBy?._id?.toString()) {
+          if (populatedTask.assignedTo.phone) {
+            notifyTaskPending(populatedTask.assignedTo, populatedTask).catch(() => {});
+          }
+        }
+      } catch (taskErr) {
+        console.error(`[Scheduler] Recurring error for task ${task._id}:`, taskErr.message);
+      }
+    }
+
+    if (recurringTasks.length > 0) {
+      console.log(`[Scheduler] Recurring: Processed ${recurringTasks.length} tasks`);
+    }
+  } catch (err) {
+    console.error('Scheduler error (recurring):', err);
+  }
+});

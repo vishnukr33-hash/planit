@@ -121,6 +121,34 @@ const taskSchema = new mongoose.Schema(
     deletedAt: {
       type: Date,
       default: null
+    },
+
+    // Recurring task fields
+    isRecurring: {
+      type: Boolean,
+      default: false
+    },
+
+    recurrenceType: {
+      type: String,
+      enum: ['monthly', 'none'],
+      default: 'none'
+    },
+
+    recurrenceActive: {
+      type: Boolean,
+      default: true
+    },
+
+    nextOccurrence: {
+      type: Date,
+      default: null
+    },
+
+    parentTaskId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Task',
+      default: null
     }
   },
   {

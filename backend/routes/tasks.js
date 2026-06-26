@@ -165,7 +165,7 @@ router.get('/:id', protect, async (req, res) => {
 // Create task
 router.post('/', protect, async (req, res) => {
   try {
-    const { isTeamTask, assignedTo, ...body } = req.body;
+    const { isTeamTask, assignedTo, isRecurring, ...body } = req.body;
     const isAssignedToOther = assignedTo && assignedTo !== req.user._id.toString();
     const taskData = {
       ...body,
@@ -174,6 +174,19 @@ router.post('/', protect, async (req, res) => {
       isTeamTask: isAssignedToOther,
       status: isAssignedToOther ? 'In Progress' : (body.status || 'Pending'),
     };
+
+    // Handle recurring task setup
+    if (isRecurring) {
+      taskData.isRecurring = true;
+      taskData.recurrenceType = 'monthly';
+      taskData.recurrenceActive = true;
+      // Calculate next occurrence (same date next month)
+      if (taskData.dueDate) {
+        const nextDate = new Date(taskData.dueDate);
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        taskData.nextOccurrence = nextDate;
+      }
+    }
 
     const task = await Task.create(taskData);
     await task.populate('assignedTo', 'name username employeeCode phone email');
@@ -198,6 +211,7 @@ router.post('/', protect, async (req, res) => {
             <p><strong>Priority:</strong> ${task.priority}</p>
             <p><strong>Due:</strong> ${dueStr}</p>
             <p><strong>Description:</strong> ${task.description || 'N/A'}</p>
+            ${task.isRecurring ? '<p><em>📅 This is a monthly recurring task.</em></p>' : ''}
             <p>Please login to Planit to start working on it.</p>
             <p><a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display:inline-block;background:#1e3a5f;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Open Planit</a></p>`
         }).catch(() => {});
@@ -380,6 +394,31 @@ router.post('/:id/comments', protect, async (req, res) => {
     if (recipient?.phone) {
       notifyChatMessage(recipient, task, req.user.name, req.body.text).catch(() => {});
     }
+
+    res.json(task);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Toggle recurring status
+router.patch('/:id/recurrence', protect, async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+
+    const isAdmin = req.user.role === 'admin';
+    const isCreator = task.assignedBy?.toString() === req.user._id.toString();
+    if (!isAdmin && !isCreator) {
+      return res.status(403).json({ message: 'Only task creator or admin can manage recurrence' });
+    }
+
+    const { recurrenceActive } = req.body;
+    task.recurrenceActive = recurrenceActive;
+    if (!recurrenceActive) {
+      task.nextOccurrence = null;
+    }
+    await task.save();
 
     res.json(task);
   } catch (err) {

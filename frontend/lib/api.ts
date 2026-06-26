@@ -62,6 +62,7 @@ export const exportTasks = (params?: object) => api.get('/tasks/export/excel', {
 export const addComment = (id: string, text: string) => api.post(`/tasks/${id}/comments`, { text })
 export const completeTask = (id: string) => api.patch(`/tasks/${id}/complete`)
 export const acceptTask = (id: string) => api.patch(`/tasks/${id}/accept`)
+export const toggleRecurrence = (id: string, active: boolean) => api.patch(`/tasks/${id}/recurrence`, { recurrenceActive: active })
 
 // Dashboard
 export const getDashboardStats = (params?: object) => api.get('/dashboard/stats', { params })
