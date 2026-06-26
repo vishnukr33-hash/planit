@@ -10,7 +10,7 @@ import { format } from 'date-fns'
 import clsx from 'clsx'
 
 export default function ChatsPage() {
-  const { user, readNotifications, markNotificationRead } = useAuthStore()
+  const { user, chatLastRead, markChatRead } = useAuthStore()
   const [selectedTask, setSelectedTask] = useState<any>(null)
   const [editTask, setEditTask] = useState<any>(null)
 
@@ -24,20 +24,24 @@ export default function ChatsPage() {
     try {
       const res = await getTask(task._id)
       setSelectedTask(res.data)
-      // Mark as read
-      markNotificationRead(`chat-${task._id}`)
+      // Mark as read with current timestamp
+      markChatRead(task._id)
     } catch {
       setSelectedTask(task)
+      markChatRead(task._id)
     }
   }
 
-  // Count unread chats
+  // Count unread messages per task based on last-read timestamp
   const getUnreadCount = (task: any) => {
-    const comments = (task.comments || []).filter((c: any) => c.type === 'comment')
-    const lastRead = readNotifications.includes(`chat-${task._id}`)
-    if (lastRead) return 0
-    // Count comments not by the current user
-    return comments.filter((c: any) => c.user?._id !== user?._id).length > 0 ? 1 : 0
+    const comments = (task.comments || []).filter((c: any) => c.type === 'comment' && c.user?._id !== user?._id)
+    const lastReadTime = chatLastRead[task._id]
+    if (!lastReadTime) {
+      // Never read — all messages from others are unread
+      return comments.length
+    }
+    const lastReadDate = new Date(lastReadTime)
+    return comments.filter((c: any) => new Date(c.createdAt) > lastReadDate).length
   }
 
   if (isLoading) return (

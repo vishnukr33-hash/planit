@@ -418,11 +418,11 @@ router.post('/:id/comments', protect, async (req, res) => {
     task.comments.push({ user: req.user._id, text: req.body.text, type: 'comment' });
     await task.save();
     await task.populate('comments.user', 'name username');
-    req.io?.to(task.assignedTo._id.toString()).emit('task:comment', { taskId: task._id, comment: task.comments.at(-1) });
+    req.io?.to(task.assignedTo._id.toString()).emit('task:comment', { taskId: task._id, taskTitle: task.title, comment: task.comments.at(-1) });
 
     // Also emit to assignedBy if different
     if (task.assignedBy && task.assignedBy._id.toString() !== task.assignedTo._id.toString()) {
-      req.io?.to(task.assignedBy._id.toString()).emit('task:comment', { taskId: task._id, comment: task.comments.at(-1) });
+      req.io?.to(task.assignedBy._id.toString()).emit('task:comment', { taskId: task._id, taskTitle: task.title, comment: task.comments.at(-1) });
     }
 
     // Send WhatsApp notification to the other party

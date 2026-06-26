@@ -19,7 +19,7 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const { user, sidebarOpen, setSidebarOpen, readNotifications } = useAuthStore()
+  const { user, sidebarOpen, setSidebarOpen, chatLastRead } = useAuthStore()
 
   // Fetch chats to get unread count
   const { data: chatsData } = useQuery({
@@ -28,12 +28,17 @@ export default function Sidebar() {
     refetchInterval: 30000,
   })
 
-  // Count tasks with unread chats
-  const unreadChatCount = (chatsData?.tasks || []).filter((task: any) => {
-    if (readNotifications.includes(`chat-${task._id}`)) return false
-    const comments = (task.comments || []).filter((c: any) => c.type === 'comment')
-    return comments.some((c: any) => c.user?._id !== user?._id)
-  }).length
+  // Count tasks with unread chats using timestamp-based tracking
+  const unreadChatCount = (chatsData?.tasks || []).reduce((count: number, task: any) => {
+    const comments = (task.comments || []).filter((c: any) => c.type === 'comment' && c.user?._id !== user?._id)
+    const lastReadTime = chatLastRead[task._id]
+    if (!lastReadTime) {
+      return count + (comments.length > 0 ? 1 : 0)
+    }
+    const lastReadDate = new Date(lastReadTime)
+    const unread = comments.filter((c: any) => new Date(c.createdAt) > lastReadDate).length
+    return count + (unread > 0 ? 1 : 0)
+  }, 0)
 
   return (
     <>

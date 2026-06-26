@@ -9,7 +9,7 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
 export default function TaskDetailModal({ task, onClose, onEdit }: { task: any; onClose: () => void; onEdit: () => void }) {
-  const { user } = useAuthStore()
+  const { user, markChatRead } = useAuthStore()
   const [comment, setComment] = useState('')
   const [localTask, setLocalTask] = useState(task)
   const chatEndRef = useRef<HTMLDivElement>(null)
@@ -32,6 +32,14 @@ export default function TaskDetailModal({ task, onClose, onEdit }: { task: any; 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [localTask.comments])
+
+  // Mark chat as read when modal opens
+  useEffect(() => {
+    if (localTask._id) {
+      markChatRead(localTask._id)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localTask._id])
 
   const refresh = (updated: any) => {
     setLocalTask(updated)
