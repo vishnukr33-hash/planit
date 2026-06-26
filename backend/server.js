@@ -13,7 +13,8 @@ const io = new Server(server, {
 
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 // Attach io to req
 app.use((req, _res, next) => { req.io = io; next(); });
