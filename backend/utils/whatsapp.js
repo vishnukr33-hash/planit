@@ -134,25 +134,27 @@ async function notifyStatusUpdate(user, task, updatedByName) {
     ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
     : 'N/A';
 
-  await sendTextMessage(user.phone,
-    `🔄 *Task Status Update*\n\n` +
-    `*Task:* ${task.title}\n` +
-    `*New Status:* ${task.status}\n` +
-    `*Priority:* ${task.priority}\n` +
-    `*Due:* ${dueStr}\n` +
-    `*Updated by:* ${updatedByName}`
-  );
+  // Use new_task template for status updates (reuse existing approved template)
+  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, [
+    user.name,
+    `${task.title} - Status: ${task.status}`,
+    task.priority,
+    dueStr,
+    updatedByName
+  ]);
 }
 
-// Send chat message notification via WhatsApp
+// Send chat message notification via WhatsApp (uses approved template)
 async function notifyChatMessage(user, task, senderName, messageText) {
-  await sendTextMessage(user.phone,
-    `💬 *New Message on Task*\n\n` +
-    `*Task:* ${task.title}\n` +
-    `*From:* ${senderName}\n` +
-    `*Message:* ${messageText}\n\n` +
-    `Open Planit to reply.`
-  );
+  // Use new_task template for chat notifications (reuse existing approved template)
+  const msgPreview = messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText;
+  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, [
+    user.name,
+    `Reply on: ${task.title}`,
+    'Message',
+    msgPreview,
+    senderName
+  ]);
 }
 
 async function testWhatsApp(phone) {
