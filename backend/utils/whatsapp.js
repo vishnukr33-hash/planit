@@ -4,8 +4,7 @@ const API_KEY = process.env.WHATSAPP_API_KEY || process.env.GUPSHUP_API_KEY || '
 const APP_NAME = process.env.WHATSAPP_APP_NAME || '';
 const APP_ID = process.env.WHATSAPP_APP_ID || '';
 const SOURCE_NUMBER = '917305045046';
-const BASE_URL = 'https://api.gupshup.io/wa/api/v1/msg';
-const TEMPLATE_URL = 'https://api.gupshup.io/sm/api/v1/template/msg';
+const TEMPLATE_URL = 'https://api.gupshup.io/wa/api/v1/template/msg';
 
 function normalizePhone(phone) {
   if (!phone) return null;
@@ -28,7 +27,6 @@ async function sendGupshupTemplate(phone, templateId, params) {
   console.log('[WhatsApp] Template to:', normalized, 'Template:', templateId, 'App:', APP_NAME);
 
   const payload = new URLSearchParams({
-    channel: 'whatsapp',
     source: SOURCE_NUMBER,
     destination: normalized,
     'src.name': APP_NAME,
