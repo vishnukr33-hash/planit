@@ -27,21 +27,21 @@ router.get('/', protect, async (req, res) => {
 
     const [dueToday, overdue, upcoming, recentComments] = await Promise.all([
       Task.find({ ...baseQuery, dueDate: { $gte: today, $lt: tomorrow }, status: { $ne: 'Done' } })
-        .populate('assignedTo', 'name username')
-        .populate('assignedBy', 'name username')
-        .populate('comments.user', 'name username'),
+        .populate('assignedTo', 'name username avatar')
+        .populate('assignedBy', 'name username avatar')
+        .populate('comments.user', 'name username avatar'),
       Task.find({ ...baseQuery, dueDate: { $lt: today }, status: { $nin: ['Done'] } })
-        .populate('assignedTo', 'name username')
-        .populate('assignedBy', 'name username')
-        .populate('comments.user', 'name username'),
+        .populate('assignedTo', 'name username avatar')
+        .populate('assignedBy', 'name username avatar')
+        .populate('comments.user', 'name username avatar'),
       Task.find({ ...baseQuery, dueDate: { $gte: tomorrow, $lte: nextWeek }, status: { $ne: 'Done' } })
-        .populate('assignedTo', 'name username')
-        .populate('assignedBy', 'name username')
-        .populate('comments.user', 'name username'),
+        .populate('assignedTo', 'name username avatar')
+        .populate('assignedBy', 'name username avatar')
+        .populate('comments.user', 'name username avatar'),
       Task.find({ ...baseQuery, 'comments.0': { $exists: true } })
-        .populate('assignedTo', 'name username')
-        .populate('assignedBy', 'name username')
-        .populate('comments.user', 'name username')
+        .populate('assignedTo', 'name username avatar')
+        .populate('assignedBy', 'name username avatar')
+        .populate('comments.user', 'name username avatar')
         .sort({ updatedAt: -1 }).limit(10)
     ]);
 

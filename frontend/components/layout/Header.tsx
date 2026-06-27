@@ -153,8 +153,8 @@ export default function Header({ title }: { title?: string }) {
       <div className="relative">
         <button onClick={() => setProfileOpen(!profileOpen)}
           className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-            {user?.name?.[0]?.toUpperCase()}
+          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold overflow-hidden">
+            {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : user?.name?.[0]?.toUpperCase()}
           </div>
           <div className="hidden sm:block text-left">
             <p className="text-sm font-medium text-slate-800 dark:text-slate-100 leading-none">{user?.name}</p>

@@ -73,8 +73,13 @@ export default function ChatsPage() {
                   className="w-full text-left px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors flex items-center gap-4"
                 >
                   {/* Avatar */}
-                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                    {(task.assignedTo?._id === user?._id ? task.assignedBy?.name?.[0] : task.assignedTo?.name?.[0]) || '?'}
+                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden">
+                    {(() => {
+                      const otherUser = task.assignedTo?._id === user?._id ? task.assignedBy : task.assignedTo
+                      return otherUser?.avatar
+                        ? <img src={otherUser.avatar} alt="" className="w-full h-full object-cover" />
+                        : (otherUser?.name?.[0] || '?')
+                    })()}
                   </div>
 
                   {/* Content */}

@@ -29,8 +29,8 @@ router.get('/trash/list', protect, async (req, res) => {
       query.assignedBy = req.user._id;
     }
     const tasks = await Task.find(query)
-      .populate('assignedTo', 'name username employeeCode')
-      .populate('assignedBy', 'name username')
+      .populate('assignedTo', 'name username employeeCode avatar')
+      .populate('assignedBy', 'name username avatar')
       .sort({ deletedAt: -1 });
     res.json({ tasks, total: tasks.length });
   } catch (err) {
@@ -67,7 +67,7 @@ router.get('/export/excel', protect, async (req, res) => {
     }
 
     const tasks = await Task.find(query)
-      .populate('assignedTo', 'name employeeCode')
+      .populate('assignedTo', 'name employeeCode avatar')
       .populate('assignedBy', 'name')
       .populate('completedBy', 'name')
       .sort({ createdAt: -1 });
@@ -108,9 +108,9 @@ router.get('/chats/list', protect, async (req, res) => {
     }
 
     const tasks = await Task.find(query)
-      .populate('assignedTo', 'name username')
-      .populate('assignedBy', 'name username')
-      .populate('comments.user', 'name username')
+      .populate('assignedTo', 'name username avatar')
+      .populate('assignedBy', 'name username avatar')
+      .populate('comments.user', 'name username avatar')
       .sort({ updatedAt: -1 })
       .limit(50);
 
@@ -167,9 +167,9 @@ router.get('/', protect, async (req, res) => {
 
     const total = await Task.countDocuments(query);
     const tasks = await Task.find(query)
-      .populate('assignedTo', 'name username employeeCode role')
-      .populate('assignedBy', 'name username role')
-      .populate('comments.user', 'name username')
+      .populate('assignedTo', 'name username employeeCode role avatar')
+      .populate('assignedBy', 'name username role avatar')
+      .populate('comments.user', 'name username avatar')
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .sort({ dueDate: 1, createdAt: -1 });
@@ -184,9 +184,9 @@ router.get('/', protect, async (req, res) => {
 router.get('/:id', protect, async (req, res) => {
   try {
     const task = await Task.findById(req.params.id)
-      .populate('assignedTo', 'name username employeeCode')
-      .populate('assignedBy', 'name username')
-      .populate('comments.user', 'name username');
+      .populate('assignedTo', 'name username employeeCode avatar')
+      .populate('assignedBy', 'name username avatar')
+      .populate('comments.user', 'name username avatar');
     if (!task) return res.status(404).json({ message: 'Task not found' });
     res.json(task);
   } catch (err) {
@@ -221,8 +221,8 @@ router.post('/', protect, async (req, res) => {
     }
 
     const task = await Task.create(taskData);
-    await task.populate('assignedTo', 'name username employeeCode phone email');
-    await task.populate('assignedBy', 'name username');
+    await task.populate('assignedTo', 'name username employeeCode phone email avatar');
+    await task.populate('assignedBy', 'name username avatar');
 
     req.io?.to(task.assignedTo._id.toString()).emit('task:new', task);
 
@@ -312,9 +312,9 @@ router.put('/:id', protect, async (req, res) => {
     }
 
     const updated = await Task.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true })
-      .populate('assignedTo', 'name username employeeCode phone email')
-      .populate('assignedBy', 'name username')
-      .populate('comments.user', 'name username');
+      .populate('assignedTo', 'name username employeeCode phone email avatar')
+      .populate('assignedBy', 'name username avatar')
+      .populate('comments.user', 'name username avatar');
 
     req.io?.to(updated.assignedTo._id.toString()).emit('task:updated', updated);
 
@@ -352,9 +352,9 @@ router.patch('/:id/accept', protect, async (req, res) => {
     await task.save();
 
     const populated = await Task.findById(task._id)
-      .populate('assignedTo', 'name username employeeCode')
-      .populate('assignedBy', 'name username')
-      .populate('comments.user', 'name username');
+      .populate('assignedTo', 'name username employeeCode avatar')
+      .populate('assignedBy', 'name username avatar')
+      .populate('comments.user', 'name username avatar');
 
     if (populated.assignedBy) {
       req.io?.to(populated.assignedBy._id.toString()).emit('task:updated', populated);
@@ -412,12 +412,12 @@ router.patch('/:id/restore', protect, async (req, res) => {
 router.post('/:id/comments', protect, async (req, res) => {
   try {
     const task = await Task.findById(req.params.id)
-      .populate('assignedTo', 'name username phone')
-      .populate('assignedBy', 'name username phone');
+      .populate('assignedTo', 'name username phone avatar')
+      .populate('assignedBy', 'name username phone avatar');
     if (!task) return res.status(404).json({ message: 'Task not found' });
     task.comments.push({ user: req.user._id, text: req.body.text, type: 'comment' });
     await task.save();
-    await task.populate('comments.user', 'name username');
+    await task.populate('comments.user', 'name username avatar');
     req.io?.to(task.assignedTo._id.toString()).emit('task:comment', { taskId: task._id, taskTitle: task.title, comment: task.comments.at(-1) });
 
     // Also emit to assignedBy if different
@@ -482,9 +482,9 @@ router.patch('/:id/complete', protect, async (req, res) => {
     task.completedBy = req.user._id;
     if (task.isTeamTask) task.lockedByDone = true;
     await task.save();
-    await task.populate('assignedTo', 'name username');
-    await task.populate('assignedBy', 'name username');
-    await task.populate('comments.user', 'name username');
+    await task.populate('assignedTo', 'name username avatar');
+    await task.populate('assignedBy', 'name username avatar');
+    await task.populate('comments.user', 'name username avatar');
     res.json(task);
   } catch (err) {
     res.status(500).json({ message: err.message });

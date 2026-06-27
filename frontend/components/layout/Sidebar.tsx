@@ -92,8 +92,8 @@ export default function Sidebar() {
         {sidebarOpen && (
           <div className="p-4 border-t border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
-                {user?.name?.[0]?.toUpperCase()}
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden">
+                {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : user?.name?.[0]?.toUpperCase()}
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate">{user?.name}</p>

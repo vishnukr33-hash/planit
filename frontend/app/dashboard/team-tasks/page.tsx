@@ -209,8 +209,8 @@ export default function TeamTasksPage() {
                     onClick={() => toggleUser(member._id)}
                     className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors text-left">
                     <span className={clsx('w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-transform', isExpanded ? 'rotate-90' : '')}>▶</span>
-                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                      {member.name[0]}
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden">
+                      {member.avatar ? <img src={member.avatar} alt="" className="w-full h-full object-cover" /> : member.name[0]}
                     </div>
                     <div className="flex-1">
                       <span className="font-medium">Team-{idx + 1} — {member.name}</span>
