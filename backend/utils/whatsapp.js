@@ -24,12 +24,14 @@ async function sendGupshupTemplate(phone, templateId, params) {
     return;
   }
 
-  console.log('[WhatsApp] Template to:', normalized, 'Template:', templateId);
+  console.log('[WhatsApp] Template to:', normalized, 'Template:', templateId, 'App:', APP_NAME);
 
-  const payload =
-    'source=' + SOURCE_NUMBER +
-    '&destination=' + normalized +
-    '&template=' + encodeURIComponent(JSON.stringify({ id: templateId, params: params || [] }));
+  const payload = new URLSearchParams({
+    source: SOURCE_NUMBER,
+    destination: normalized,
+    'src.name': APP_NAME,
+    template: JSON.stringify({ id: templateId, params: params || [] }),
+  }).toString();
 
   try {
     const res = await axios.post(TEMPLATE_URL, payload, {
@@ -39,10 +41,10 @@ async function sendGupshupTemplate(phone, templateId, params) {
       },
       timeout: 10000
     });
-    console.log('[WhatsApp] Template sent:', res.data?.status || 'ok');
+    console.log('[WhatsApp] Template sent:', JSON.stringify(res.data));
     return res.data;
   } catch (err) {
-    console.error('[WhatsApp] Template error:', err.response?.data || err.message);
+    console.error('[WhatsApp] Template error:', JSON.stringify(err.response?.data || err.message));
   }
 }
 
