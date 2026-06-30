@@ -36,19 +36,16 @@ export default function LoginPage() {
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg overflow-hidden">
             <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect width="64" height="64" rx="16" fill="#1e3a5f"/>
-              <rect x="14" y="12" width="28" height="32" rx="4" stroke="#fff" strokeWidth="2.5" fill="none"/>
-              <path d="M20 22h16M20 30h20M20 38h12" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-              <circle cx="18" cy="22" r="2.5" fill="#3b82f6"/>
-              <path d="M16.5 22l1.5 1.5 2.5-2.5" stroke="#fff" strokeWidth="1" strokeLinecap="round"/>
-              <circle cx="18" cy="30" r="2.5" fill="#3b82f6"/>
-              <path d="M16.5 30l1.5 1.5 2.5-2.5" stroke="#fff" strokeWidth="1" strokeLinecap="round"/>
-              <circle cx="18" cy="38" r="2.5" fill="#9ca3af"/>
-              <circle cx="44" cy="44" r="12" fill="#166534"/>
-              <path d="M38 44l4 4 6-6" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="32" cy="28" r="14" stroke="#3b82f6" strokeWidth="3" fill="none"/>
+              <path d="M32 16v12l5 5" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round"/>
+              <path d="M24 26l6 6 10-10" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M12 26h6M12 34h7M12 42h5" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round"/>
+              <circle cx="48" cy="18" r="5" fill="#10b981"/>
+              <path d="M46 18l2 2 3-3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-white"><span style={{color:'#93c5fd'}}>Plan</span><span style={{color:'#4ade80'}}>it</span></h1>
-          <p className="text-blue-200 mt-1">Enterprise Task Management</p>
+          <h1 className="text-3xl font-bold text-white"><span style={{color:'#93c5fd'}}>TVS</span> <span style={{color:'#4ade80'}}>DOT</span></h1>
+          <p className="text-blue-200 mt-1">— No More FOMO —</p>
         </div>
 
         <div className="card p-8 shadow-2xl">

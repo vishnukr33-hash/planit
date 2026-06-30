@@ -6,8 +6,8 @@ import { Providers } from './providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Planit',
-  description: 'Enterprise Task Management System',
+  title: 'TVS DOT',
+  description: 'No More FOMO — Task Management',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

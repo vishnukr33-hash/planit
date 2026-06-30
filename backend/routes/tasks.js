@@ -84,7 +84,7 @@ router.get('/export/excel', protect, async (req, res) => {
     }).join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=planit-tasks.csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=TVS DOT-tasks.csv');
     res.send(headers + rows);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -244,8 +244,8 @@ router.post('/', protect, async (req, res) => {
             <p><strong>Due:</strong> ${dueStr}</p>
             <p><strong>Description:</strong> ${task.description || 'N/A'}</p>
             ${task.isRecurring ? '<p><em>📅 This is a monthly recurring task.</em></p>' : ''}
-            <p>Please login to Planit to start working on it.</p>
-            <p><a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display:inline-block;background:#1e3a5f;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Open Planit</a></p>`
+            <p>Please login to TVS DOT to start working on it.</p>
+            <p><a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display:inline-block;background:#1e3a5f;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Open TVS DOT</a></p>`
         }).catch(() => {});
       }
     }

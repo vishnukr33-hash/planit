@@ -46,8 +46,8 @@ cron.schedule('30 3 * * *', async () => {
             <p><strong>Due:</strong> ${dueStr}</p>
             <p><strong>Status:</strong> ${task.status}</p>
             <p><strong>Priority:</strong> ${task.priority}</p>
-            <p>Please update the status in Planit.</p>
-            <p><a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display:inline-block;background:#1e3a5f;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Open Planit</a></p>`
+            <p>Please update the status in TVS DOT.</p>
+            <p><a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display:inline-block;background:#1e3a5f;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Open TVS DOT</a></p>`
         }).catch(() => {});
       }
     }
@@ -94,8 +94,8 @@ cron.schedule('30 3 * * *', async () => {
             <p><strong>Due Date:</strong> ${dueStr}</p>
             <p><strong>Status:</strong> ${task.status}</p>
             <p><strong>Priority:</strong> ${task.priority}</p>
-            <p>Please complete it or update the status in Planit immediately.</p>
-            <p><a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display:inline-block;background:#dc2626;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Open Planit</a></p>`
+            <p>Please complete it or update the status in TVS DOT immediately.</p>
+            <p><a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display:inline-block;background:#dc2626;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Open TVS DOT</a></p>`
         }).catch(() => {});
       }
     }
@@ -140,8 +140,8 @@ cron.schedule('*/5 * * * *', async () => {
             <p><strong>Your task "${task.title}" is due in 1 hour at ${dueTime}.</strong></p>
             <p><strong>Status:</strong> ${task.status}</p>
             <p><strong>Priority:</strong> ${task.priority}</p>
-            <p>Please complete it or update the status in Planit immediately.</p>
-            <p><a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display:inline-block;background:#1e3a5f;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Open Planit</a></p>`
+            <p>Please complete it or update the status in TVS DOT immediately.</p>
+            <p><a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display:inline-block;background:#1e3a5f;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Open TVS DOT</a></p>`
         }).catch(() => {});
       }
 

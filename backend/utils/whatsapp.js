@@ -160,7 +160,7 @@ async function notifyChatMessage(user, task, senderName, messageText) {
 }
 
 async function testWhatsApp(phone) {
-  return sendTextMessage(phone, '✅ *Planit Test*\nWhatsApp integration is working!');
+  return sendTextMessage(phone, '✅ *TVS DOT Test*\nWhatsApp integration is working!');
 }
 
 module.exports = {
