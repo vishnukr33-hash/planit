@@ -2,6 +2,7 @@ const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
+const LoginLog = require('../models/LoginLog');
 const { protect } = require('../middleware/auth');
 const { sendEmail } = require('../utils/email');
 
@@ -20,7 +21,11 @@ router.post('/login', async (req, res) => {
     if (user.status === 'inactive') return res.status(403).json({ message: 'Account is inactive' });
 
     const token = signToken(user._id);
-    res.json({ token, user: user.toJSON() });
+
+    // Record login
+    const loginLog = await LoginLog.create({ user: user._id, loginAt: new Date() });
+
+    res.json({ token, user: user.toJSON(), sessionId: loginLog._id });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -37,6 +42,24 @@ router.delete('/clear-tasks', protect, async (req, res) => {
 
 // Get current user
 router.get('/me', protect, (req, res) => res.json(req.user));
+
+// Logout — record session end
+router.post('/logout', protect, async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    if (sessionId) {
+      const log = await LoginLog.findById(sessionId);
+      if (log && !log.logoutAt) {
+        log.logoutAt = new Date();
+        log.duration = Math.round((log.logoutAt - log.loginAt) / 60000); // minutes
+        await log.save();
+      }
+    }
+    res.json({ message: 'Logged out' });
+  } catch (err) {
+    res.status(200).json({ message: 'Logged out' });
+  }
+});
 
 // Test WhatsApp (admin only) — GET /api/auth/test-whatsapp?phone=919876543210
 router.get('/test-whatsapp', protect, async (req, res) => {

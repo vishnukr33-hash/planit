@@ -28,6 +28,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/reminders', require('./routes/reminders'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/reports', require('./routes/reports'));
 
 // Socket.io
 io.on('connection', (socket) => {

@@ -69,5 +69,9 @@ export const toggleRecurrence = (id: string, active: boolean) => api.patch(`/tas
 export const getDashboardStats = (params?: object) => api.get('/dashboard/stats', { params })
 export const getTeamProductivity = (params?: object) => api.get('/dashboard/team-productivity', { params })
 
+// Reports (admin)
+export const getUserActivityReport = (params?: object) => api.get('/reports/user-activity', { params })
+export const logoutSession = (sessionId: string) => api.post('/auth/logout', { sessionId })
+
 // Reminders
 export const getReminders = () => api.get('/reminders')

@@ -13,6 +13,7 @@ const navItems = [
   { href: '/dashboard/team-tasks', label: 'Team Tasks', icon: '👥' },
   { href: '/dashboard/chats', label: 'Chats', icon: '💬' },
   { href: '/dashboard/reminders', label: 'Reminders', icon: '🔔' },
+  { href: '/dashboard/reports', label: 'Reports', icon: '📊', roles: ['admin'] },
   { href: '/dashboard/deleted', label: 'Deleted', icon: '🗑️' },
   { href: '/dashboard/users', label: 'Add User', icon: '➕', roles: ['admin', 'head', 'teamlead'] },
 ]
