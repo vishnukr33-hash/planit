@@ -50,7 +50,7 @@ export default function Sidebar() {
 
       <aside className={clsx(
         'fixed top-0 left-0 h-full z-30 flex flex-col transition-all duration-300',
-        'bg-brand-800 dark:bg-slate-900 text-white',
+        'bg-black dark:bg-black text-white',
         sidebarOpen ? 'w-64' : 'w-16',
         'lg:relative lg:translate-x-0',
         !sidebarOpen && '-translate-x-full lg:translate-x-0'
@@ -71,7 +71,7 @@ export default function Sidebar() {
           </div>
           {sidebarOpen && (
             <div>
-              <span className="font-bold text-lg tracking-tight"><span className="text-purple-200">TVS</span> <span className="text-green-400">D<span className="relative inline-block"><span>O</span><svg className="absolute top-[5px] left-[2px] w-[10px] h-[10px]" viewBox="0 0 12 12" fill="none"><path d="M3 6.5l2 2L9 4.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>T</span></span>
+              <span className="font-bold text-lg tracking-tight"><span className="text-blue-300">TVS</span> <span className="text-green-400 font-extrabold">D<span className="relative inline-block"><span>O</span><svg className="absolute top-[5px] left-[2px] w-[10px] h-[10px]" viewBox="0 0 12 12" fill="none"><path d="M3 6.5l2 2L9 4.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>T</span></span>
               <p className="text-[9px] text-slate-400 -mt-0.5 tracking-wider">— No More FOMO —</p>
             </div>
           )}
