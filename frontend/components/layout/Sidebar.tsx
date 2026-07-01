@@ -71,8 +71,8 @@ export default function Sidebar() {
           </div>
           {sidebarOpen && (
             <div>
-              <span className="font-bold text-lg tracking-tight"><span className="text-blue-300">TVS</span> <span className="text-green-400 font-extrabold">D<span className="inline-block relative w-[16px] h-[16px] align-middle mx-[1px]"><svg viewBox="0 0 20 20" className="w-full h-full"><circle cx="10" cy="10" r="9" fill="#22c55e"/><path d="M6 10.5l3 3 5.5-5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></span>T</span></span>
-              <p className="text-[9px] text-slate-400 -mt-0.5 tracking-wider">— No More FOMO —</p>
+              <span className="font-bold text-lg tracking-tight"><span className="text-white">TVS</span> <span className="text-green-400 font-extrabold">D<span className="inline-block relative w-[16px] h-[16px] align-middle mx-[1px]"><svg viewBox="0 0 20 20" className="w-full h-full"><circle cx="10" cy="10" r="9" fill="#22c55e"/><path d="M6 10.5l3 3 5.5-5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></span>T</span></span>
+              <p className="text-[9px] text-white -mt-0.5 tracking-wider">— No More FOMO —</p>
             </div>
           )}
         </div>
