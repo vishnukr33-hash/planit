@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const Task = require('../models/Task');
 const { protect } = require('../middleware/auth');
-const { notifyTaskAssigned, notifyStatusUpdate } = require('../utils/whatsapp');
+const { notifyTaskAssigned } = require('../utils/whatsapp');
 const { sendEmail } = require('../utils/email');
 
 const User = require('../models/User');
@@ -319,7 +319,7 @@ router.put('/:id', protect, async (req, res) => {
     req.io?.to(updated.assignedTo._id.toString()).emit('task:updated', updated);
 
     if (updateData.status && updateData.status !== prevStatus && updated.assignedTo.phone) {
-      notifyStatusUpdate(updated.assignedTo, updated, req.user.name).catch(() => {});
+      // WhatsApp status update notification removed
     }
 
     res.json(updated);
@@ -423,14 +423,6 @@ router.post('/:id/comments', protect, async (req, res) => {
     // Also emit to assignedBy if different
     if (task.assignedBy && task.assignedBy._id.toString() !== task.assignedTo._id.toString()) {
       req.io?.to(task.assignedBy._id.toString()).emit('task:comment', { taskId: task._id, taskTitle: task.title, comment: task.comments.at(-1) });
-    }
-
-    // Send WhatsApp notification to the other party
-    const { notifyChatMessage } = require('../utils/whatsapp');
-    const recipientIsAssignee = req.user._id.toString() !== task.assignedTo._id.toString();
-    const recipient = recipientIsAssignee ? task.assignedTo : task.assignedBy;
-    if (recipient?.phone) {
-      notifyChatMessage(recipient, task, req.user.name, req.body.text).catch(() => {});
     }
 
     res.json(task);
