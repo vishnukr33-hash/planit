@@ -13,7 +13,6 @@ const TEMPLATE_TASK_LATE = process.env.WHATSAPP_TEMPLATE_TASK_LATE || 'e4fe8bc8-
 function normalizePhone(phone) {
   if (!phone) return null;
   let normalized = String(phone).replace(/[\s\-\+]/g, '');
-  // Add India country code if only 10 digits
   if (normalized.length === 10) {
     normalized = '91' + normalized;
   }
@@ -54,77 +53,18 @@ async function sendGupshupTemplate(phone, templateId, params) {
   }
 }
 
-// Send plain text message via Gupshup
-async function sendTextMessage(phone, message) {
-  const normalized = normalizePhone(phone);
-  if (!normalized || !API_KEY) {
-    console.log('[WhatsApp] Skipped - no phone or API key');
-    return;
-  }
-
-  console.log('[WhatsApp] Text to:', normalized);
-
-  const payload = new URLSearchParams({
-    channel: 'whatsapp',
-    source: SOURCE_NUMBER,
-    destination: normalized,
-    'src.name': APP_NAME,
-    message: JSON.stringify({ type: 'text', text: message }),
-  }).toString();
-
-  try {
-    const res = await axios.post(BASE_URL, payload, {
-      headers: {
-        apikey: API_KEY,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      timeout: 10000
-    });
-    console.log('[WhatsApp] Text sent:', res.data?.status || 'ok');
-    return res.data;
-  } catch (err) {
-    console.error('[WhatsApp] Text error:', err.response?.data || err.message);
-  }
-}
-
-// === TEMPLATE IDS ===
-const TEMPLATE_NEW_TASK = '28160587806875627';      // new_task - At time of task assigning
-const TEMPLATE_TASK_PENDING = '1057554603269663';   // task_pending - N-1 Day before due date
-const TEMPLATE_TASK_LATE = '2056861468282029';      // task_late - After due date, daily 9 AM
-
 // === NOTIFICATION FUNCTIONS ===
 
-// Trigger 1: At the time of Task Assigning (new_task template)
 async function notifyTaskAssigned(user, task, assignedByName) {
-  const dueStr = task.dueDate
-    ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
-    : 'No due date';
-
-  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, [
-    user.name, task.title, task.priority, dueStr, assignedByName
-  ]);
+  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, []);
 }
 
-// Trigger 2: N-1 Day of Task Due Date (task_pending template)
 async function notifyTaskPending(user, task) {
-  const dueStr = task.dueDate
-    ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
-    : 'N/A';
-
-  return sendGupshupTemplate(user.phone, TEMPLATE_TASK_PENDING, [
-    user.name, task.title, dueStr, task.status, task.priority
-  ]);
+  return sendGupshupTemplate(user.phone, TEMPLATE_TASK_PENDING, []);
 }
 
-// Trigger 3: After Due Date and Time - Every Day 9:00 AM (task_late template)
 async function notifyTaskLate(user, task) {
-  const dueStr = task.dueDate
-    ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
-    : 'N/A';
-
-  return sendGupshupTemplate(user.phone, TEMPLATE_TASK_LATE, [
-    user.name, task.title, dueStr, task.status, task.priority
-  ]);
+  return sendGupshupTemplate(user.phone, TEMPLATE_TASK_LATE, []);
 }
 
 async function notifyReminder(user, task, type) {
@@ -138,40 +78,19 @@ async function notifyReminder(user, task, type) {
 }
 
 async function notifyStatusUpdate(user, task, updatedByName) {
-  const dueStr = task.dueDate
-    ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
-    : 'N/A';
-
-  // Use new_task template for status updates (reuse existing approved template)
-  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, [
-    user.name,
-    `${task.title} - Status: ${task.status}`,
-    task.priority,
-    dueStr,
-    updatedByName
-  ]);
+  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, []);
 }
 
-// Send chat message notification via WhatsApp (uses approved template)
 async function notifyChatMessage(user, task, senderName, messageText) {
-  // Use new_task template for chat notifications (reuse existing approved template)
-  const msgPreview = messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText;
-  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, [
-    user.name,
-    `Reply on: ${task.title}`,
-    'Message',
-    msgPreview,
-    senderName
-  ]);
+  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, []);
 }
 
 async function testWhatsApp(phone) {
-  return sendTextMessage(phone, '✅ *TVS DOT Test*\nWhatsApp integration is working!');
+  return sendGupshupTemplate(phone, TEMPLATE_NEW_TASK, []);
 }
 
 module.exports = {
   sendGupshupTemplate,
-  sendTextMessage,
   notifyTaskAssigned,
   notifyTaskPending,
   notifyTaskLate,
