@@ -4,11 +4,11 @@ const User = require('../models/User');
 const LoginLog = require('../models/LoginLog');
 const { protect } = require('../middleware/auth');
 
-// Reports - accessible to admin, head, and teamlead
+// Admin-only reports
 router.get('/user-activity', protect, async (req, res) => {
   try {
-    if (req.user.role === 'user') {
-      return res.status(403).json({ message: 'Not authorized' });
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin only' });
     }
 
     const { startDate, endDate } = req.query;
