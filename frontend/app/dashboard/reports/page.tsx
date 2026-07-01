@@ -17,15 +17,14 @@ export default function ReportsPage() {
       ...(dateRange.startDate ? { startDate: dateRange.startDate } : {}),
       ...(dateRange.endDate ? { endDate: dateRange.endDate } : {}),
     }).then(r => r.data),
-    enabled: user?.role === 'admin',
   })
 
-  if (user?.role !== 'admin') {
+  if (user?.role === 'user') {
     return (
       <DashboardLayout title="Reports">
         <div className="card p-12 text-center text-slate-400">
           <p className="text-4xl mb-3">🔒</p>
-          <p>Admin access required</p>
+          <p>Access restricted</p>
         </div>
       </DashboardLayout>
     )
