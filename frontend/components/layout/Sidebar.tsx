@@ -71,7 +71,7 @@ export default function Sidebar() {
           </div>
           {sidebarOpen && (
             <div>
-              <span className="font-bold text-lg tracking-tight"><span className="text-blue-200">TVS</span> <span className="text-green-400">DOT</span></span>
+              <span className="font-bold text-lg tracking-tight"><span className="text-purple-200">TVS</span> <span className="text-green-400">D<span className="relative inline-block"><span>O</span><svg className="absolute top-[2px] left-[1px] w-[11px] h-[11px]" viewBox="0 0 12 12" fill="none"><path d="M3 6l2.5 2.5L9.5 4" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>T</span></span>
               <p className="text-[9px] text-slate-400 -mt-0.5 tracking-wider">— No More FOMO —</p>
             </div>
           )}
@@ -84,7 +84,7 @@ export default function Sidebar() {
               className={clsx(
                 'flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-colors text-sm font-medium relative',
                 pathname === item.href
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-purple-600 text-white'
                   : 'text-slate-300 hover:bg-white/10 hover:text-white'
               )}>
               <span className="text-base flex-shrink-0">{item.icon}</span>
@@ -102,7 +102,7 @@ export default function Sidebar() {
         {sidebarOpen && (
           <div className="p-4 border-t border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden">
+              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden">
                 {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : user?.name?.[0]?.toUpperCase()}
               </div>
               <div className="min-w-0">
