@@ -1,10 +1,14 @@
 const axios = require('axios');
 
-const API_KEY = process.env.WHATSAPP_API_KEY || process.env.GUPSHUP_API_KEY || '';
+const API_KEY = process.env.WHATSAPP_API_KEY || '';
 const APP_NAME = process.env.WHATSAPP_APP_NAME || '';
-const APP_ID = process.env.WHATSAPP_APP_ID || '';
 const SOURCE_NUMBER = '917305045046';
 const TEMPLATE_URL = 'https://api.gupshup.io/wa/api/v1/template/msg';
+
+// Gupshup Template IDs (use Gupshup template ID, NOT Facebook template ID)
+const TEMPLATE_NEW_TASK = process.env.WHATSAPP_TEMPLATE_NEW_TASK || 'e4fe8bc8-bb0a-4cfe-8f4c-de7136339a9c';
+const TEMPLATE_TASK_PENDING = process.env.WHATSAPP_TEMPLATE_TASK_PENDING || 'e4fe8bc8-bb0a-4cfe-8f4c-de7136339a9c';
+const TEMPLATE_TASK_LATE = process.env.WHATSAPP_TEMPLATE_TASK_LATE || 'e4fe8bc8-bb0a-4cfe-8f4c-de7136339a9c';
 
 function normalizePhone(phone) {
   if (!phone) return null;
@@ -27,6 +31,7 @@ async function sendGupshupTemplate(phone, templateId, params) {
   console.log('[WhatsApp] Template to:', normalized, 'Template:', templateId, 'App:', APP_NAME);
 
   const payload = new URLSearchParams({
+    channel: 'whatsapp',
     source: SOURCE_NUMBER,
     destination: normalized,
     'src.name': APP_NAME,
@@ -36,8 +41,9 @@ async function sendGupshupTemplate(phone, templateId, params) {
   try {
     const res = await axios.post(TEMPLATE_URL, payload, {
       headers: {
-        apikey: API_KEY,
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Cache-Control': 'no-cache',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'apikey': API_KEY,
       },
       timeout: 10000
     });
