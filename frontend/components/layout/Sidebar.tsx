@@ -58,6 +58,7 @@ export default function Sidebar() {
       )}>
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-white/10">
+          <Link href="/dashboard" className="block hover:opacity-80 transition-opacity">
           {sidebarOpen && (
             <div>
               <span className="font-bold text-lg tracking-tight"><span className="text-white">TVS</span> <span className="text-green-400 font-extrabold">D<span className="inline-block relative w-[16px] h-[16px] align-middle mx-[1px]"><svg viewBox="0 0 20 20" className="w-full h-full"><circle cx="10" cy="10" r="9" fill="#22c55e"/><path d="M6 10.5l3 3 5.5-5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></span>T</span></span>
@@ -67,6 +68,7 @@ export default function Sidebar() {
           {!sidebarOpen && (
             <span className="font-bold text-sm text-green-400">D<span className="inline-block relative w-[12px] h-[12px] align-middle"><svg viewBox="0 0 20 20" className="w-full h-full"><circle cx="10" cy="10" r="9" fill="#22c55e"/><path d="M6 10.5l3 3 5.5-5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></span>T</span>
           )}
+          </Link>
         </div>
 
         {/* Nav */}
