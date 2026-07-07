@@ -20,7 +20,7 @@ export default function TaskTable({ tasks, showAssignee }: Props) {
   const [editTask, setEditTask] = useState<any>(null)
   const [viewTask, setViewTask] = useState<any>(null)
   const qc = useQueryClient()
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = user?.role === 'admin' || user?.role === 'head'
 
   const deleteMutation = useMutation({
     mutationFn: deleteTask,

@@ -14,7 +14,7 @@ export default function TaskDetailModal({ task, onClose, onEdit }: { task: any; 
   const [localTask, setLocalTask] = useState(task)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const qc = useQueryClient()
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = user?.role === 'admin' || user?.role === 'head'
   const isAssigned = localTask.assignedTo?._id === user?._id ||
     String(localTask.assignedTo?._id) === String(user?._id)
   const isCreator = localTask.assignedBy?._id === user?._id ||

@@ -132,10 +132,11 @@ router.get('/', protect, async (req, res) => {
     const { status, category, priority, isTeamTask, assignedTo, search, filter, page = 1, limit = 50, startDate, endDate } = req.query;
     const query = { isDeleted: { $ne: true } };
 
-    if (req.user.role === 'admin') {
+    if (req.user.role === 'admin' || req.user.role === 'head') {
+      // Admin and Head see ALL tasks
       if (assignedTo) query.assignedTo = assignedTo;
       if (isTeamTask !== undefined) query.isTeamTask = isTeamTask === 'true';
-    } else if (req.user.role === 'head' || req.user.role === 'teamlead') {
+    } else if (req.user.role === 'teamlead') {
       if (isTeamTask === 'true') {
         query.assignedBy = req.user._id;
         query.assignedTo = { $ne: req.user._id };
@@ -317,7 +318,7 @@ router.put('/:id', protect, async (req, res) => {
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'head';
     const isAssigned = task.assignedTo.toString() === req.user._id.toString();
     const isCreator = task.assignedBy?.toString() === req.user._id.toString();
 
@@ -426,10 +427,10 @@ router.delete('/:id', protect, async (req, res) => {
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'head';
     const isCreator = task.assignedBy?.toString() === req.user._id.toString();
 
-    if (!isAdmin && !isCreator && req.user.role !== 'head' && req.user.role !== 'teamlead') {
+    if (!isAdmin && !isCreator && req.user.role !== 'teamlead') {
       return res.status(403).json({ message: 'Not authorized to delete tasks' });
     }
 
@@ -445,7 +446,7 @@ router.delete('/:id', protect, async (req, res) => {
 // Permanently delete task from trash
 router.delete('/:id/permanent', protect, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+    if (req.user.role !== 'admin' && req.user.role !== 'head') return res.status(403).json({ message: 'Admin/Head only' });
     await Task.findByIdAndDelete(req.params.id);
     res.json({ message: 'Task permanently deleted' });
   } catch (err) {
@@ -492,7 +493,7 @@ router.patch('/:id/recurrence', protect, async (req, res) => {
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'head';
     const isCreator = task.assignedBy?.toString() === req.user._id.toString();
     if (!isAdmin && !isCreator) {
       return res.status(403).json({ message: 'Only task creator or admin can manage recurrence' });

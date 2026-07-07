@@ -63,7 +63,7 @@ export default function DeletedPage() {
                         <div className="flex gap-2">
                           <button onClick={() => restoreMutation.mutate(task._id)}
                             className="px-2 py-1 text-xs bg-green-50 text-green-600 rounded hover:bg-green-100">Restore</button>
-                          {user?.role === 'admin' && (
+                          {(user?.role === 'admin' || user?.role === 'head') && (
                             <button onClick={() => { if (confirm('Permanently delete?')) deleteMutation.mutate(task._id) }}
                               className="px-2 py-1 text-xs bg-red-50 text-red-600 rounded hover:bg-red-100">Delete Forever</button>
                           )}
