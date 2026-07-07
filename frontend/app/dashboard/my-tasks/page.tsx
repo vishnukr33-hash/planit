@@ -60,10 +60,16 @@ export default function MyTasksPage() {
   }, [searchParams])
 
   const queryParams: Record<string, any> = {
-    assignedTo: user?._id,
-    isTeamTask: false,
     ...Object.fromEntries(Object.entries({ status: filters.status, category: filters.category, priority: filters.priority, search: filters.search }).filter(([, v]) => v))
   }
+
+  // For admin: don't restrict by assignedTo (show all tasks like dashboard)
+  // For others: restrict to own tasks only
+  if (user?.role !== 'admin') {
+    queryParams.assignedTo = user?._id
+    queryParams.isTeamTask = false
+  }
+
   if (filters.filter === 'overdue') {
     queryParams.filter = 'overdue'
   }
