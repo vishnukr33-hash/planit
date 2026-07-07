@@ -197,7 +197,7 @@ export default function TeamTasksPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {(usersData?.users || []).map((member: any, idx: number) => {
+            {([...(usersData?.users || [])].sort((a: any, b: any) => a.name.localeCompare(b.name))).map((member: any) => {
               const memberTasks = getTasksForUser(member._id)
               const memberProd = getProductivityForUser(member._id)
               const isExpanded = expandedUsers.has(member._id)
@@ -213,8 +213,7 @@ export default function TeamTasksPage() {
                       {member.avatar ? <img src={member.avatar} alt="" className="w-full h-full object-cover" /> : member.name[0]}
                     </div>
                     <div className="flex-1">
-                      <span className="font-medium">Team-{idx + 1} — {member.name}</span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">({member.employeeCode})</span>
+                      <span className="font-medium">{member.name}</span>
                     </div>
                     <div className="flex items-center gap-3 text-sm">
                       <span className="text-slate-500">{memberTasks.length} tasks</span>
