@@ -87,6 +87,17 @@ const taskSchema = new mongoose.Schema(
       default: false
     },
 
+    // Shared task — assigned to multiple users
+    isShared: {
+      type: Boolean,
+      default: false
+    },
+
+    sharedWith: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+
     comments: [commentSchema],
 
     attachments: [

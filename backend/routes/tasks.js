@@ -67,20 +67,22 @@ router.get('/export/excel', protect, async (req, res) => {
     }
 
     const tasks = await Task.find(query)
-      .populate('assignedTo', 'name employeeCode avatar')
+      .populate('assignedTo', 'name employeeCode')
       .populate('assignedBy', 'name')
+      .populate('sharedWith', 'name')
       .populate('completedBy', 'name')
       .sort({ createdAt: -1 });
 
-    // Generate CSV with Completion Date & Time columns
-    const headers = 'Title,Description,Status,Category,Priority,Due Date,Due Time,Assigned To,Assigned By,Created At,Completion Date,Completion Time\n';
+    // Generate CSV with Completion Date, Time, and Shared With columns
+    const headers = 'Title,Description,Status,Category,Priority,Due Date,Due Time,Assigned To,Assigned By,Shared With,Created At,Completion Date,Completion Time\n';
     const rows = tasks.map(t => {
       const due = t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-IN') : '';
       const dueTime = t.dueDate ? new Date(t.dueDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
       const created = new Date(t.createdAt).toLocaleString('en-IN');
       const completionDate = t.completedAt ? new Date(t.completedAt).toLocaleDateString('en-IN') : '';
       const completionTime = t.completedAt ? new Date(t.completedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
-      return `"${(t.title || '').replace(/"/g, '""')}","${(t.description || '').replace(/"/g, '""')}","${t.status}","${t.category}","${t.priority}","${due}","${dueTime}","${t.assignedTo?.name || ''}","${t.assignedBy?.name || ''}","${created}","${completionDate}","${completionTime}"`;
+      const sharedWith = t.isShared && t.sharedWith?.length ? t.sharedWith.map(u => u.name).join('; ') : '';
+      return `"${(t.title || '').replace(/"/g, '""')}","${(t.description || '').replace(/"/g, '""')}","${t.status}","${t.category}","${t.priority}","${due}","${dueTime}","${t.assignedTo?.name || ''}","${t.assignedBy?.name || ''}","${sharedWith}","${created}","${completionDate}","${completionTime}"`;
     }).join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
@@ -169,6 +171,7 @@ router.get('/', protect, async (req, res) => {
     const tasks = await Task.find(query)
       .populate('assignedTo', 'name username employeeCode role avatar')
       .populate('assignedBy', 'name username role avatar')
+      .populate('sharedWith', 'name username employeeCode avatar')
       .populate('comments.user', 'name username avatar')
       .skip((page - 1) * limit)
       .limit(Number(limit))
@@ -186,6 +189,7 @@ router.get('/:id', protect, async (req, res) => {
     const task = await Task.findById(req.params.id)
       .populate('assignedTo', 'name username employeeCode avatar')
       .populate('assignedBy', 'name username avatar')
+      .populate('sharedWith', 'name username employeeCode avatar')
       .populate('comments.user', 'name username avatar');
     if (!task) return res.status(404).json({ message: 'Task not found' });
     res.json(task);
@@ -197,7 +201,59 @@ router.get('/:id', protect, async (req, res) => {
 // Create task
 router.post('/', protect, async (req, res) => {
   try {
-    const { isTeamTask, assignedTo, isRecurring, ...body } = req.body;
+    const { isTeamTask, assignedTo, isRecurring, isShared, sharedWith, ...body } = req.body;
+
+    // SHARED TASK: create one task instance per assignee
+    if (isShared && sharedWith && sharedWith.length > 0) {
+      const createdTasks = [];
+      const dueStr = body.dueDate ? new Date(body.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'No due date';
+
+      for (const userId of sharedWith) {
+        const taskData = {
+          ...body,
+          assignedBy: req.user._id,
+          assignedTo: userId,
+          isTeamTask: true,
+          isShared: true,
+          sharedWith: sharedWith,
+          status: 'In Progress',
+        };
+        if (isRecurring) {
+          taskData.isRecurring = true;
+          taskData.recurrenceType = 'monthly';
+          taskData.recurrenceActive = true;
+          if (taskData.dueDate) {
+            const nextDate = new Date(taskData.dueDate);
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            taskData.nextOccurrence = nextDate;
+          }
+        }
+        const task = await Task.create(taskData);
+        await task.populate('assignedTo', 'name username employeeCode phone email avatar');
+        await task.populate('assignedBy', 'name username avatar');
+        await task.populate('sharedWith', 'name username employeeCode avatar');
+
+        req.io?.to(task.assignedTo._id.toString()).emit('task:new', task);
+
+        if (task.assignedTo.phone) notifyTaskAssigned(task.assignedTo, task, req.user.name).catch(() => {});
+        if (task.assignedTo.email) {
+          sendEmail({
+            to: task.assignedTo.email,
+            subject: `👥 Shared Task: "${task.title}"`,
+            html: `<p>Hi ${task.assignedTo.name},</p>
+              <p>A shared task has been assigned to you by <strong>${req.user.name}</strong>.</p>
+              <p><strong>Task:</strong> ${task.title}</p>
+              <p><strong>Priority:</strong> ${task.priority}</p>
+              <p><strong>Due:</strong> ${dueStr}</p>
+              <p>👥 This is a shared task.<br/><a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display:inline-block;background:#9333ea;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Open TVS DOT</a></p>`
+          }).catch(() => {});
+        }
+        createdTasks.push(task);
+      }
+      return res.status(201).json(createdTasks[0]);
+    }
+
+    // REGULAR TASK
     const isAssignedToOther = assignedTo && assignedTo !== req.user._id.toString();
     const taskData = {
       ...body,
@@ -212,7 +268,6 @@ router.post('/', protect, async (req, res) => {
       taskData.isRecurring = true;
       taskData.recurrenceType = 'monthly';
       taskData.recurrenceActive = true;
-      // Calculate next occurrence (same date next month)
       if (taskData.dueDate) {
         const nextDate = new Date(taskData.dueDate);
         nextDate.setMonth(nextDate.getMonth() + 1);

@@ -21,12 +21,9 @@ export default function TaskModal({ task, onClose, defaultAssignTo, isTeamTask }
   const isAdmin = user?.role === 'admin'
   const canAssign = user?.role !== 'user'
 
-  // Determine if the current user is the creator or just the assignee
   const isCreator = task?.assignedBy?._id === user?._id
   const isAssignedToMe = task?.assignedTo?._id === user?._id
   const isSelfAssigned = task ? task.assignedBy?._id === task.assignedTo?._id : false
-
-  // If editing: assignee on someone else's task can only change status
   const statusOnlyEdit = isEdit && !isAdmin && !isCreator && isAssignedToMe && !isSelfAssigned
 
   const [form, setForm] = useState({
@@ -39,6 +36,8 @@ export default function TaskModal({ task, onClose, defaultAssignTo, isTeamTask }
     dueTime: task?.dueDate ? new Date(task.dueDate).toTimeString().slice(0, 5) : '09:00',
     assignedTo: task?.assignedTo?._id || defaultAssignTo || '',
     isRecurring: task?.isRecurring || false,
+    isShared: task?.isShared || false,
+    sharedWith: task?.sharedWith?.map((u: any) => u._id || u) || [] as string[],
   })
 
   const { data: usersData } = useQuery({
@@ -58,19 +57,24 @@ export default function TaskModal({ task, onClose, defaultAssignTo, isTeamTask }
     onError: (err: any) => toast.error(err.response?.data?.message || 'Error saving task'),
   })
 
+  const toggleSharedUser = (userId: string) => {
+    setForm(f => ({
+      ...f,
+      sharedWith: f.sharedWith.includes(userId)
+        ? f.sharedWith.filter((id: string) => id !== userId)
+        : [...f.sharedWith, userId]
+    }))
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
-    // Status-only edit: just send the status
-    if (statusOnlyEdit) {
-      mutation.mutate({ status: form.status })
-      return
-    }
-
+    if (statusOnlyEdit) { mutation.mutate({ status: form.status }); return }
     if (!form.title.trim()) return toast.error('Title is required')
     if (!form.dueDate) return toast.error('Due Date is required')
     if (!form.dueTime) return toast.error('Due Time is required')
-    if (isTeamTask && !form.assignedTo) return toast.error('Please select a team member')
+    if (isTeamTask && !form.isShared && !form.assignedTo) return toast.error('Please select a team member')
+    if (form.isShared && form.sharedWith.length === 0) return toast.error('Please select at least one team member for shared task')
+
     const payload: any = {
       title: form.title,
       description: form.description,
@@ -78,9 +82,14 @@ export default function TaskModal({ task, onClose, defaultAssignTo, isTeamTask }
       category: form.category,
       priority: form.priority,
       dueDate: new Date(form.dueDate + 'T' + form.dueTime).toISOString(),
+      isRecurring: form.isRecurring || undefined,
     }
-    if (form.assignedTo) payload.assignedTo = form.assignedTo
-    if (form.isRecurring) payload.isRecurring = true
+    if (form.isShared) {
+      payload.isShared = true
+      payload.sharedWith = form.sharedWith
+    } else if (form.assignedTo) {
+      payload.assignedTo = form.assignedTo
+    }
     mutation.mutate(payload)
   }
 
@@ -94,111 +103,122 @@ export default function TaskModal({ task, onClose, defaultAssignTo, isTeamTask }
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide-in">
         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-          <h2 className="text-lg font-semibold">
-            {isEdit ? (statusOnlyEdit ? 'Update Status' : 'Edit Task') : 'New Task'}
-          </h2>
+          <h2 className="text-lg font-semibold">{isEdit ? (statusOnlyEdit ? 'Update Status' : 'Edit Task') : 'New Task'}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl">✕</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Title — read-only for status-only edit */}
+          {/* Title */}
           <div>
             <label className="label">Task Title {!statusOnlyEdit && '*'}</label>
-            {statusOnlyEdit ? (
-              <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.title}</p>
-            ) : (
-              <input className="input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Enter task title" required />
-            )}
+            {statusOnlyEdit
+              ? <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.title}</p>
+              : <input className="input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Enter task title" required />}
           </div>
 
-          {/* Description — read-only for status-only edit */}
+          {/* Description */}
           <div>
             <label className="label">Description</label>
-            {statusOnlyEdit ? (
-              <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed min-h-[60px]">{form.description || '—'}</p>
-            ) : (
-              <textarea className="input resize-none" rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Task description..." />
-            )}
+            {statusOnlyEdit
+              ? <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed min-h-[60px]">{form.description || '—'}</p>
+              : <textarea className="input resize-none" rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Task description..." />}
           </div>
 
+          {/* Status + Priority */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Status — always editable */}
             <div>
               <label className="label">Status</label>
-              {isEdit ? (
-                <select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                  {statusOptions.map(s => <option key={s}>{s}</option>)}
-                </select>
-              ) : (
-                <input className="input bg-slate-50 dark:bg-slate-700/50" value="Pending" readOnly />
-              )}
+              {isEdit
+                ? <select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>{statusOptions.map(s => <option key={s}>{s}</option>)}</select>
+                : <input className="input bg-slate-50 dark:bg-slate-700/50" value="Pending" readOnly />}
             </div>
-
-            {/* Priority — read-only for status-only edit */}
             <div>
               <label className="label">Priority</label>
-              {statusOnlyEdit ? (
-                <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.priority}</p>
-              ) : (
-                <select className="input" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
-                  {PRIORITIES.map(p => <option key={p}>{p}</option>)}
-                </select>
-              )}
+              {statusOnlyEdit
+                ? <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.priority}</p>
+                : <select className="input" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>{PRIORITIES.map(p => <option key={p}>{p}</option>)}</select>}
             </div>
           </div>
 
+          {/* Category + Due Date */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Category — read-only for status-only edit */}
             <div>
               <label className="label">Category</label>
-              {statusOnlyEdit ? (
-                <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.category}</p>
-              ) : (
-                <select className="input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                </select>
-              )}
+              {statusOnlyEdit
+                ? <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.category}</p>
+                : <select className="input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>}
             </div>
-
-            {/* Due Date — read-only for status-only edit */}
             <div>
               <label className="label">Due Date {!statusOnlyEdit && '*'}</label>
-              {statusOnlyEdit ? (
-                <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.dueDate || '—'}</p>
-              ) : (
-                <input type="date" className="input" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} min={format(new Date(), 'yyyy-MM-dd')} required />
-              )}
+              {statusOnlyEdit
+                ? <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.dueDate || '—'}</p>
+                : <input type="date" className="input" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} min={format(new Date(), 'yyyy-MM-dd')} required />}
             </div>
           </div>
 
-          {/* Due Time — read-only for status-only edit */}
-          {!statusOnlyEdit && (
-            <div>
-              <label className="label">Due Time *</label>
-              <input type="time" className="input" value={form.dueTime} onChange={e => setForm(f => ({ ...f, dueTime: e.target.value }))} min={form.dueDate === format(new Date(), 'yyyy-MM-dd') ? format(new Date(), 'HH:mm') : undefined} required />
-            </div>
-          )}
-          {statusOnlyEdit && (
-            <div>
-              <label className="label">Due Time</label>
-              <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.dueTime || '—'}</p>
-            </div>
+          {/* Due Time */}
+          {!statusOnlyEdit
+            ? <div><label className="label">Due Time *</label><input type="time" className="input" value={form.dueTime} onChange={e => setForm(f => ({ ...f, dueTime: e.target.value }))} min={form.dueDate === format(new Date(), 'yyyy-MM-dd') ? format(new Date(), 'HH:mm') : undefined} required /></div>
+            : <div><label className="label">Due Time</label><p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.dueTime || '—'}</p></div>}
+
+          {/* Assignment section */}
+          {canAssign && !statusOnlyEdit && (
+            <>
+              {/* Shared Task toggle */}
+              <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div>
+                  <label className="label mb-0">👥 Shared Task</label>
+                  <p className="text-xs text-slate-400">Assign to multiple team members</p>
+                </div>
+                <button type="button" onClick={() => setForm(f => ({ ...f, isShared: !f.isShared, sharedWith: [], assignedTo: '' }))}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${form.isShared ? 'bg-purple-600' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${form.isShared ? 'translate-x-6' : ''}`} />
+                </button>
+              </div>
+
+              {/* Multi-select for shared task */}
+              {form.isShared ? (
+                <div>
+                  <label className="label">Select Team Members * ({form.sharedWith.length} selected)</label>
+                  <div className="border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                    {usersData?.users?.length === 0 ? (
+                      <p className="text-sm text-slate-400 p-3">No team members available</p>
+                    ) : usersData?.users?.map((u: any) => (
+                      <label key={u._id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={form.sharedWith.includes(u._id)}
+                          onChange={() => toggleSharedUser(u._id)}
+                          className="w-4 h-4 text-purple-600 rounded"
+                        />
+                        <div className="w-7 h-7 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold overflow-hidden flex-shrink-0">
+                          {u.avatar ? <img src={u.avatar} alt="" className="w-full h-full object-cover" /> : u.name?.[0]}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{u.name}</p>
+                          <p className="text-xs text-slate-400">{u.employeeCode} · {u.role}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  {form.sharedWith.length > 0 && (
+                    <p className="text-xs text-green-600 mt-1">✓ Shared with: {usersData?.users?.filter((u: any) => form.sharedWith.includes(u._id)).map((u: any) => u.name).join(', ')}</p>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <label className="label">{isTeamTask ? 'Assign To Team Member *' : 'Assign To'}</label>
+                  <select className="input" value={form.assignedTo} onChange={e => setForm(f => ({ ...f, assignedTo: e.target.value }))}>
+                    {isTeamTask ? <option value="">-- Select Team Member --</option> : <option value="">Self</option>}
+                    {usersData?.users?.map((u: any) => <option key={u._id} value={u._id}>{u.name} ({u.employeeCode})</option>)}
+                  </select>
+                </div>
+              )}
+            </>
           )}
 
-          {/* Assign To — read-only for status-only edit */}
-          {canAssign && !statusOnlyEdit && (
-            <div>
-              <label className="label">{isTeamTask ? 'Assign To Team Member *' : 'Assign To'}</label>
-              <select className="input" value={form.assignedTo} onChange={e => setForm(f => ({ ...f, assignedTo: e.target.value }))}>
-                {isTeamTask ? (
-                  <option value="">-- Select Team Member --</option>
-                ) : (
-                  <option value="">Self</option>
-                )}
-                {usersData?.users?.map((u: any) => (
-                  <option key={u._id} value={u._id}>{u.name} ({u.employeeCode})</option>
-                ))}
-              </select>
-            </div>
+          {/* Assigned To read-only for status-only edit */}
+          {statusOnlyEdit && task?.assignedTo?.name && (
+            <div><label className="label">Assigned To</label><p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{task.assignedTo.name}</p></div>
           )}
 
           {/* Monthly Recurring toggle */}
@@ -208,19 +228,10 @@ export default function TaskModal({ task, onClose, defaultAssignTo, isTeamTask }
                 <label className="label mb-0">Monthly Recurring</label>
                 <p className="text-xs text-slate-400">Task repeats on the same date every month</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setForm(f => ({ ...f, isRecurring: !f.isRecurring }))}
-                className={`relative w-12 h-6 rounded-full transition-colors ${form.isRecurring ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'}`}
-              >
+              <button type="button" onClick={() => setForm(f => ({ ...f, isRecurring: !f.isRecurring }))}
+                className={`relative w-12 h-6 rounded-full transition-colors ${form.isRecurring ? 'bg-purple-600' : 'bg-slate-300 dark:bg-slate-600'}`}>
                 <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${form.isRecurring ? 'translate-x-6' : ''}`} />
               </button>
-            </div>
-          )}
-          {statusOnlyEdit && task?.assignedTo?.name && (
-            <div>
-              <label className="label">Assigned To</label>
-              <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{task.assignedTo.name}</p>
             </div>
           )}
 

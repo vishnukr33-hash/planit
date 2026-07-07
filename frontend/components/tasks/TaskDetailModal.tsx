@@ -78,6 +78,7 @@ export default function TaskDetailModal({ task, onClose, onEdit }: { task: any; 
               <span className={clsx('badge', PRIORITY_COLORS[localTask.priority])}>{localTask.priority}</span>
               <span className={clsx('badge', CATEGORY_COLORS[localTask.category] || 'bg-slate-100 text-slate-600')}>{localTask.category}</span>
               {localTask.lockedByDone && <span className="badge bg-slate-100 text-slate-500 text-xs">🔒 Locked</span>}
+              {localTask.isShared && <span className="badge bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 text-xs">👥 Shared</span>}
             </div>
             <h2 className="text-base font-semibold truncate">{localTask.title}</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -87,6 +88,11 @@ export default function TaskDetailModal({ task, onClose, onEdit }: { task: any; 
                 {format(new Date(localTask.dueDate), 'dd MMM yyyy, hh:mm a')}
               </strong></>}
             </p>
+            {localTask.isShared && localTask.sharedWith?.length > 0 && (
+              <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                👥 Shared with: {localTask.sharedWith.map((u: any) => u.name || u).join(', ')}
+              </p>
+            )}
           </div>
           <div className="flex gap-2 ml-3 flex-shrink-0">
             {canEdit && <button onClick={onEdit} className="btn-secondary text-sm py-1.5 px-3">Edit</button>}

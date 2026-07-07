@@ -87,9 +87,19 @@ export default function TaskTable({ tasks, showAssignee }: Props) {
                     {task.assignedBy?._id === task.assignedTo?._id && (
                       <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">Self Assigned</span>
                     )}
+                    {/* Shared Task badge */}
+                    {task.isShared && (
+                      <span title="Shared Task" className="inline-block mt-0.5 ml-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">👥 Shared</span>
+                    )}
                     {/* Recurring badge */}
                     {task.isRecurring && (
                       <span className="inline-block mt-0.5 ml-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">🔄 Monthly</span>
+                    )}
+                    {/* Shared with users */}
+                    {task.isShared && task.sharedWith?.length > 0 && (
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                        Shared with: {task.sharedWith.map((u: any) => u.name).join(', ')}
+                      </p>
                     )}
                     {/* Last chat message preview */}
                     {(() => {
