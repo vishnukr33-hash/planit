@@ -168,15 +168,18 @@ router.get('/', protect, async (req, res) => {
       if (endDate) query.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
     }
 
-    const total = await Task.countDocuments(query);
-    const tasks = await Task.find(query)
-      .populate('assignedTo', 'name username employeeCode role avatar')
-      .populate('assignedBy', 'name username role avatar')
-      .populate('sharedWith', 'name username employeeCode avatar')
-      .populate('comments.user', 'name username avatar')
-      .skip((page - 1) * limit)
-      .limit(Number(limit))
-      .sort({ dueDate: 1, createdAt: -1 });
+    const [total, tasks] = await Promise.all([
+      Task.countDocuments(query),
+      Task.find(query)
+        .populate('assignedTo', 'name username employeeCode role avatar')
+        .populate('assignedBy', 'name username role avatar')
+        .populate('sharedWith', 'name username employeeCode avatar')
+        .populate('comments.user', 'name username avatar')
+        .skip((page - 1) * limit)
+        .limit(Number(limit))
+        .sort({ dueDate: 1, createdAt: -1 })
+        .lean()
+    ]);
 
     res.json({ tasks, total });
   } catch (err) {

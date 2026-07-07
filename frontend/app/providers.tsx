@@ -22,12 +22,16 @@ function SocketProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user || !token) return
+    // Don't reconnect if already connected
+    if (socketRef.current?.connected) return
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
     const socketUrl = apiUrl.replace('/api', '')
 
     const socket = io(socketUrl, {
-      transports: ['websocket', 'polling'],
+      transports: ['websocket'],
+      reconnectionDelay: 3000,
+      reconnectionAttempts: 3,
     })
 
     socketRef.current = socket

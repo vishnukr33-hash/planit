@@ -71,18 +71,35 @@ router.get('/stats', protect, async (req, res) => {
     ]);
     const personalProductivity = prodTotal > 0 ? Math.round((prodCompleted / prodTotal) * 100) : 0;
 
-    const [total, open, pending, completed, overdue, dueToday, inProgress, needDiscussion, delayed, totalUsers] = await Promise.all([
-      Task.countDocuments(baseQuery),
-      Task.countDocuments({ ...baseQuery, status: { $in: openTaskStatuses } }),
-      Task.countDocuments({ ...baseQuery, status: 'Pending' }),
-      Task.countDocuments({ ...baseQuery, status: 'Done' }),
-      Task.countDocuments({ ...baseQuery, dueDate: { $lt: today }, status: { $nin: ['Done'] } }),
-      Task.countDocuments({ ...baseQuery, dueDate: { $gte: today, $lt: tomorrow }, status: { $ne: 'Done' } }),
-      Task.countDocuments({ ...baseQuery, status: 'In Progress' }),
-      Task.countDocuments({ ...baseQuery, status: 'Need Discussion' }),
-      Task.countDocuments({ ...baseQuery, status: 'Delayed' }),
-      req.user.role === 'admin' ? User.countDocuments({ role: 'user', status: 'active' }) : 0
+    // Single aggregation to get all KPI counts at once (faster than 10 separate queries)
+    const kpiAgg = await Task.aggregate([
+      { $match: baseQuery },
+      { $group: {
+        _id: null,
+        total: { $sum: 1 },
+        completed: { $sum: { $cond: [{ $eq: ['$status', 'Done'] }, 1, 0] } },
+        pending: { $sum: { $cond: [{ $eq: ['$status', 'Pending'] }, 1, 0] } },
+        inProgress: { $sum: { $cond: [{ $eq: ['$status', 'In Progress'] }, 1, 0] } },
+        needDiscussion: { $sum: { $cond: [{ $eq: ['$status', 'Need Discussion'] }, 1, 0] } },
+        delayed: { $sum: { $cond: [{ $eq: ['$status', 'Delayed'] }, 1, 0] } },
+        open: { $sum: { $cond: [{ $in: ['$status', ['Pending', 'In Progress', 'Need Discussion', 'Delayed']] }, 1, 0] } },
+        overdue: { $sum: { $cond: [{ $and: [{ $lt: ['$dueDate', today] }, { $ne: ['$status', 'Done'] }] }, 1, 0] } },
+        dueToday: { $sum: { $cond: [{ $and: [{ $gte: ['$dueDate', today] }, { $lt: ['$dueDate', tomorrow] }, { $ne: ['$status', 'Done'] }] }, 1, 0] } },
+      }}
     ]);
+    const kpi = kpiAgg[0] || {};
+    const total = kpi.total || 0;
+    const open = kpi.open || 0;
+    const pending = kpi.pending || 0;
+    const completed = kpi.completed || 0;
+    const overdue = kpi.overdue || 0;
+    const dueToday = kpi.dueToday || 0;
+    const inProgress = kpi.inProgress || 0;
+    const needDiscussion = kpi.needDiscussion || 0;
+    const delayed = kpi.delayed || 0;
+    const totalUsers = (req.user.role === 'admin' || req.user.role === 'head')
+      ? await User.countDocuments({ role: { $nin: ['admin', 'head'] }, status: 'active' })
+      : 0;
 
     const productivity = personalProductivity;
 

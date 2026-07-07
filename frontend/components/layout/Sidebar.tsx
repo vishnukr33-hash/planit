@@ -26,8 +26,9 @@ export default function Sidebar() {
   const { data: chatsData } = useQuery({
     queryKey: ['chats'],
     queryFn: () => getChats().then(r => r.data),
-    refetchInterval: 120000, // 2 minutes
+    refetchInterval: 120000,
     staleTime: 60000,
+    enabled: !!user, // only fetch when logged in
   })
 
   // Count tasks with unread chats using timestamp-based tracking
