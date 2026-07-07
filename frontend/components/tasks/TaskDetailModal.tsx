@@ -95,7 +95,7 @@ export default function TaskDetailModal({ task, onClose, onEdit }: { task: any; 
             )}
           </div>
           <div className="flex gap-2 ml-3 flex-shrink-0">
-            {canEdit && <button onClick={onEdit} className="btn-secondary text-sm py-1.5 px-3">Edit</button>}
+            {canEdit && <button onClick={onEdit} className="bg-purple-600 hover:bg-purple-700 text-white text-sm py-1.5 px-4 rounded-lg font-medium transition-colors">Edit</button>}
             <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
           </div>
         </div>

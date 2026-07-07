@@ -153,7 +153,7 @@ export default function TaskTable({ tasks, showAssignee }: Props) {
                       {/* Edit — admin, creator, or assigned user (if not locked/done) */}
                       {canEdit && (
                         <button onClick={() => setEditTask(task)} title="Edit"
-                          className="p-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors">✏️</button>
+                          className="p-1.5 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-500 transition-colors">✏️</button>
                       )}
 
                       {/* Delete — admin or task creator (head/teamlead) */}
