@@ -129,24 +129,59 @@ router.get('/chats/list', protect, async (req, res) => {
 // Get tasks
 router.get('/', protect, async (req, res) => {
   try {
-    const { status, category, priority, isTeamTask, assignedTo, search, filter, page = 1, limit = 50, startDate, endDate } = req.query;
+    const { status, category, priority, isTeamTask, assignedTo, search, filter, page = 1, limit = 50, startDate, endDate, scope } = req.query;
     const query = { isDeleted: { $ne: true } };
 
-    if (req.user.role === 'admin' || req.user.role === 'head') {
-      // Admin and Head see ALL tasks
+    if (req.user.role === 'admin') {
+      // Admin sees ALL tasks
       if (assignedTo) query.assignedTo = assignedTo;
       if (isTeamTask !== undefined) query.isTeamTask = isTeamTask === 'true';
-    } else if (req.user.role === 'teamlead') {
+
+    } else if (req.user.role === 'head') {
       if (isTeamTask === 'true') {
+        // Team Tasks: tasks assigned BY head to others
         query.assignedBy = req.user._id;
         query.assignedTo = { $ne: req.user._id };
-      } else if (assignedTo) {
-        query.assignedTo = assignedTo;
+      } else if (scope === 'dashboard') {
+        // Dashboard scope: self tasks + tasks assigned by head to others
+        query.$or = [
+          { assignedTo: req.user._id },
+          { assignedBy: req.user._id, isTeamTask: true }
+        ];
       } else {
+        // My Tasks: ONLY self-assigned tasks (assigned to head AND by head)
+        query.assignedTo = req.user._id;
+        query.assignedBy = req.user._id;
+      }
+
+    } else if (req.user.role === 'teamlead') {
+      if (isTeamTask === 'true') {
+        // Team Tasks: tasks assigned BY teamlead to others
+        query.assignedBy = req.user._id;
+        query.assignedTo = { $ne: req.user._id };
+      } else if (scope === 'dashboard') {
+        // Dashboard scope: tasks assigned to self + tasks assigned by teamlead to others
+        query.$or = [
+          { assignedTo: req.user._id },
+          { assignedBy: req.user._id, isTeamTask: true }
+        ];
+      } else {
+        // My Tasks: tasks assigned TO this teamlead (by anyone)
         query.assignedTo = req.user._id;
       }
+
     } else {
+      // User: My Tasks = tasks assigned to this user (by anyone)
       query.assignedTo = req.user._id;
+    }
+
+    if (assignedTo && !['admin'].includes(req.user.role)) {
+      // explicit assignedTo override (from team tasks filter)
+      if (req.user.role === 'head' || req.user.role === 'teamlead') {
+        query.assignedTo = assignedTo;
+        delete query.assignedBy;
+        delete query.$or;
+      }
     }
 
     if (status) query.status = status;

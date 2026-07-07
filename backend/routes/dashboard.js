@@ -26,13 +26,20 @@ router.get('/stats', protect, async (req, res) => {
 
     if (req.user.role === 'admin') {
       // Admin sees all tasks
-    } else if (req.user.role === 'head' || req.user.role === 'teamlead') {
-      // Head/TeamLead sees their own tasks + tasks they assigned
+    } else if (req.user.role === 'head') {
+      // Dashboard = self tasks + tasks assigned BY head to others
       baseQuery.$or = [
         { assignedTo: req.user._id },
-        { assignedBy: req.user._id }
+        { assignedBy: req.user._id, isTeamTask: true }
+      ];
+    } else if (req.user.role === 'teamlead') {
+      // Dashboard = tasks assigned to self + tasks assigned by teamlead to others
+      baseQuery.$or = [
+        { assignedTo: req.user._id },
+        { assignedBy: req.user._id, isTeamTask: true }
       ];
     } else {
+      // User: only tasks assigned to them
       baseQuery.assignedTo = req.user._id;
     }
 
@@ -46,24 +53,18 @@ router.get('/stats', protect, async (req, res) => {
     const openTaskStatuses = ['Pending', 'In Progress', 'Need Discussion', 'Delayed'];
 
     // Productivity KPI: role-based personal productivity
-    // Head: own tasks (self-assigned)
-    // TeamLead: tasks assigned to them by Head
-    // User: tasks assigned to them by TeamLead
+    // Head: self-assigned tasks only
+    // TeamLead: tasks assigned TO them by Head (parent)
+    // User: all tasks assigned TO them (by anyone)
     let productivityBaseQuery = { isDeleted: { $ne: true }, assignedTo: req.user._id };
     if (req.user.role === 'head') {
-      // Head productivity = self-assigned tasks only
-      productivityBaseQuery.assignedBy = req.user._id;
+      productivityBaseQuery.assignedBy = req.user._id; // self-assigned only
     } else if (req.user.role === 'teamlead') {
-      // TeamLead productivity = tasks assigned by Head (their parent)
       if (req.user.parentId) {
-        productivityBaseQuery.assignedBy = req.user.parentId;
-      }
-    } else if (req.user.role === 'user') {
-      // User productivity = tasks assigned by TeamLead (their parent)
-      if (req.user.parentId) {
-        productivityBaseQuery.assignedBy = req.user.parentId;
+        productivityBaseQuery.assignedBy = req.user.parentId; // assigned by Head
       }
     }
+    // User: all tasks assigned to them — no extra filter needed
 
     const [prodTotal, prodCompleted] = await Promise.all([
       Task.countDocuments(productivityBaseQuery),

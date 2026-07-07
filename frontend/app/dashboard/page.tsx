@@ -61,7 +61,7 @@ export default function DashboardPage() {
     ? `&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
     : ''
 
-  const navTo = (params: string) => router.push(`${basePath}?${params}${dateQuery}`)
+  const navTo = (params: string) => router.push(`${basePath}?${params}&scope=dashboard${dateQuery}`)
 
   const trendDays = dateRange.startDate && dateRange.endDate
     ? eachDayOfInterval({ start: parseISO(dateRange.startDate), end: parseISO(dateRange.endDate) }).map(d => format(d, 'yyyy-MM-dd'))

@@ -43,6 +43,7 @@ export default function MyTasksPage() {
     search: '',
     filter: searchParams.get('filter') === 'overdue' ? 'overdue' : '',
     filterOpen: searchParams.get('filter') === 'open',
+    scope: searchParams.get('scope') || '', // 'dashboard' when navigating from dashboard
   })
 
   // Sync if URL params change
@@ -55,6 +56,7 @@ export default function MyTasksPage() {
       status: searchParams.get('status') || '',
       filter: navFilter === 'overdue' ? 'overdue' : '',
       filterOpen: navFilter === 'open',
+      scope: searchParams.get('scope') || '',
     }))
     // Apply date range from URL if present
     if (navStartDate && navEndDate) {
@@ -76,10 +78,17 @@ export default function MyTasksPage() {
     ...Object.fromEntries(Object.entries({ status: filters.status, category: filters.category, priority: filters.priority, search: filters.search }).filter(([, v]) => v))
   }
 
-  // For admin/head: don't restrict by assignedTo (show all tasks like dashboard)
-  if (user?.role !== 'admin' && user?.role !== 'head') {
-    queryParams.assignedTo = user?._id
-    queryParams.isTeamTask = false
+  // Pass scope to backend for correct query logic
+  if (filters.scope === 'dashboard') {
+    queryParams.scope = 'dashboard'
+  } else {
+    // My Tasks page: restrict by role
+    if (user?.role !== 'admin') {
+      queryParams.assignedTo = user?._id
+      if (user?.role !== 'head' && user?.role !== 'teamlead') {
+        queryParams.isTeamTask = false
+      }
+    }
   }
 
   if (filters.filter === 'overdue') {
@@ -126,7 +135,7 @@ export default function MyTasksPage() {
   }
 
   const clearAllFilters = () => {
-    setFilters({ status: '', category: '', priority: '', search: '', filter: '', filterOpen: false })
+    setFilters({ status: '', category: '', priority: '', search: '', filter: '', filterOpen: false, scope: '' })
     setDateRange({ startDate: '', endDate: '' })
   }
 
