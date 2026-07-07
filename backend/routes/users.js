@@ -5,10 +5,21 @@ const { protect } = require('../middleware/auth');
 // Role hierarchy: who can create whom
 const canCreate = {
   admin: ['head', 'teamlead', 'user'],
-  head: ['teamlead'],
+  head: ['teamlead', 'user'],
   teamlead: ['user'],
   user: [],
 };
+
+// Helper: get all subordinate IDs recursively
+async function getAllSubordinateIds(userId) {
+  const directChildren = await User.find({ parentId: userId }).select('_id');
+  let ids = directChildren.map(u => u._id);
+  for (const child of directChildren) {
+    const grandChildren = await getAllSubordinateIds(child._id);
+    ids = ids.concat(grandChildren);
+  }
+  return ids;
+}
 
 // Get users visible to current user based on hierarchy
 router.get('/', protect, async (req, res) => {
@@ -20,8 +31,9 @@ router.get('/', protect, async (req, res) => {
       // Admin sees everyone except other admins
       query.role = { $ne: 'admin' };
     } else if (req.user.role === 'head') {
-      // Head sees only their direct children (teamleads)
-      query.parentId = req.user._id;
+      // Head sees ALL users in their hierarchy (teamleads + their users)
+      const subordinateIds = await getAllSubordinateIds(req.user._id);
+      query._id = { $in: subordinateIds };
     } else if (req.user.role === 'teamlead') {
       // Team Lead sees only their direct children (users)
       query.parentId = req.user._id;
@@ -61,13 +73,14 @@ router.get('/subordinates', protect, async (req, res) => {
     let users = [];
     if (req.user.role === 'admin') {
       // Admin can assign to any non-admin user
-      users = await User.find({ role: { $ne: 'admin' }, status: 'active' }).select('name employeeCode role');
+      users = await User.find({ role: { $ne: 'admin' }, status: 'active' }).select('name employeeCode role avatar');
     } else if (req.user.role === 'head') {
-      // Head can assign to their teamleads
-      users = await User.find({ parentId: req.user._id, status: 'active' }).select('name employeeCode role');
+      // Head can assign to ALL users in their full hierarchy
+      const subordinateIds = await getAllSubordinateIds(req.user._id);
+      users = await User.find({ _id: { $in: subordinateIds }, status: 'active' }).select('name employeeCode role avatar');
     } else if (req.user.role === 'teamlead') {
-      // Team Lead can assign to their users
-      users = await User.find({ parentId: req.user._id, status: 'active' }).select('name employeeCode role');
+      // Team Lead can assign to their direct users
+      users = await User.find({ parentId: req.user._id, status: 'active' }).select('name employeeCode role avatar');
     }
     res.json({ users });
   } catch (err) {
