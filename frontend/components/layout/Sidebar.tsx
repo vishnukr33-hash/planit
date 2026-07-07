@@ -58,23 +58,14 @@ export default function Sidebar() {
       )}>
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-white/10">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="32" height="32" rx="8" fill="#1e3a5f"/>
-              <circle cx="16" cy="14" r="8" stroke="#3b82f6" strokeWidth="2" fill="none"/>
-              <path d="M16 8v6l3 3" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round"/>
-              <path d="M12 12l3 3 5-5" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M6 14h3M6 18h4M6 22h3" stroke="#60a5fa" strokeWidth="1.5" strokeLinecap="round"/>
-              <path d="M23 8l1-1M25 8.5l.5-.5" stroke="#10b981" strokeWidth="1" strokeLinecap="round"/>
-              <circle cx="24" cy="10" r="2.5" fill="#10b981"/>
-              <path d="M23 10l1 1 2-2" stroke="white" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
           {sidebarOpen && (
             <div>
               <span className="font-bold text-lg tracking-tight"><span className="text-white">TVS</span> <span className="text-green-400 font-extrabold">D<span className="inline-block relative w-[16px] h-[16px] align-middle mx-[1px]"><svg viewBox="0 0 20 20" className="w-full h-full"><circle cx="10" cy="10" r="9" fill="#22c55e"/><path d="M6 10.5l3 3 5.5-5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></span>T</span></span>
               <p className="text-[9px] text-white -mt-0.5 tracking-wider">— No More FOMO —</p>
             </div>
+          )}
+          {!sidebarOpen && (
+            <span className="font-bold text-sm text-green-400">D<span className="inline-block relative w-[12px] h-[12px] align-middle"><svg viewBox="0 0 20 20" className="w-full h-full"><circle cx="10" cy="10" r="9" fill="#22c55e"/><path d="M6 10.5l3 3 5.5-5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></span>T</span>
           )}
         </div>
 
