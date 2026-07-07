@@ -18,9 +18,13 @@ export default function MyTasksPage() {
   const [showModal, setShowModal] = useState(false)
   const [viewTask, setViewTask] = useState<any>(null)
 
-  // Date range state — only apply by default if no navigation filters
-  const hasNavFilter = !!(searchParams.get('status') || searchParams.get('filter'))
-  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({ startDate: '', endDate: '' })
+  // Date range state — read from URL params if navigating from dashboard, else use date picker
+  const urlStartDate = searchParams.get('startDate') || ''
+  const urlEndDate = searchParams.get('endDate') || ''
+  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({
+    startDate: urlStartDate,
+    endDate: urlEndDate,
+  })
 
   const handleDateChange = (range: { startDate: string; endDate: string }) => {
     // Only apply date range if no status/filter from dashboard navigation
@@ -37,16 +41,25 @@ export default function MyTasksPage() {
     category: '',
     priority: '',
     search: '',
-    filter: searchParams.get('filter') || '',
+    filter: searchParams.get('filter') === 'overdue' ? 'overdue' : '',
+    filterOpen: searchParams.get('filter') === 'open',
   })
 
   // Sync if URL params change
   useEffect(() => {
+    const navStartDate = searchParams.get('startDate') || ''
+    const navEndDate = searchParams.get('endDate') || ''
+    const navFilter = searchParams.get('filter') || ''
     setFilters(f => ({
       ...f,
       status: searchParams.get('status') || '',
-      filter: searchParams.get('filter') || '',
+      filter: navFilter === 'overdue' ? 'overdue' : '',
+      filterOpen: navFilter === 'open',
     }))
+    // Apply date range from URL if present
+    if (navStartDate && navEndDate) {
+      setDateRange({ startDate: navStartDate, endDate: navEndDate })
+    }
   }, [searchParams])
 
   // Open task detail if taskId in URL (from notification click)
@@ -63,9 +76,8 @@ export default function MyTasksPage() {
     ...Object.fromEntries(Object.entries({ status: filters.status, category: filters.category, priority: filters.priority, search: filters.search }).filter(([, v]) => v))
   }
 
-  // For admin: don't restrict by assignedTo (show all tasks like dashboard)
-  // For others: restrict to own tasks only
-  if (user?.role !== 'admin') {
+  // For admin/head: don't restrict by assignedTo (show all tasks like dashboard)
+  if (user?.role !== 'admin' && user?.role !== 'head') {
     queryParams.assignedTo = user?._id
     queryParams.isTeamTask = false
   }
@@ -73,11 +85,13 @@ export default function MyTasksPage() {
   if (filters.filter === 'overdue') {
     queryParams.filter = 'overdue'
   }
-  // Only apply date filter if no status/overdue filter from navigation
-  if (!filters.status && !filters.filter) {
-    if (dateRange.startDate) queryParams.startDate = dateRange.startDate
-    if (dateRange.endDate) queryParams.endDate = dateRange.endDate
+  // "Open Tasks" = multiple statuses filter
+  if (filters.filterOpen) {
+    queryParams.filter = 'open'
   }
+  // Always apply date range (from URL params or date picker)
+  if (dateRange.startDate) queryParams.startDate = dateRange.startDate
+  if (dateRange.endDate) queryParams.endDate = dateRange.endDate
 
   const { data, isLoading } = useQuery({
     queryKey: ['tasks', 'my', filters, dateRange],
@@ -86,6 +100,8 @@ export default function MyTasksPage() {
 
   const activeFilterLabel = filters.filter === 'overdue'
     ? 'Overdue Tasks'
+    : filters.filterOpen
+    ? 'Open Tasks'
     : filters.status
     ? `Status: ${filters.status}`
     : null
@@ -110,8 +126,7 @@ export default function MyTasksPage() {
   }
 
   const clearAllFilters = () => {
-    setFilters({ status: '', category: '', priority: '', search: '', filter: '' })
-    // Re-enable date filter after clearing
+    setFilters({ status: '', category: '', priority: '', search: '', filter: '', filterOpen: false })
     setDateRange({ startDate: '', endDate: '' })
   }
 
@@ -120,7 +135,7 @@ export default function MyTasksPage() {
       <div className="space-y-4">
         {/* Date Filter */}
         <div className="card p-4">
-          <DateFilter onChange={handleDateChange} defaultMode={hasNavFilter ? 'month' : 'month'} />
+          <DateFilter onChange={handleDateChange} defaultMode="month" />
         </div>
 
         {/* Active filter banner */}
@@ -176,8 +191,8 @@ export default function MyTasksPage() {
             <div className="flex justify-center py-12"><div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>
           ) : (
             <TaskTable tasks={
-              // Hide Done tasks from default view; show when explicitly filtered by status=Done
-              (!filters.status && !filters.filter)
+              // Hide Done tasks from default view; show when explicitly filtered
+              (!filters.status && !filters.filter && !filters.filterOpen)
                 ? (data?.tasks || []).filter((t: any) => t.status !== 'Done')
                 : (data?.tasks || [])
             } />

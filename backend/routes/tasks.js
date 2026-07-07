@@ -160,6 +160,9 @@ router.get('/', protect, async (req, res) => {
       query.dueDate = { $lt: today };
       query.status = { $nin: ['Done'] };
     }
+    if (filter === 'open') {
+      query.status = { $in: ['Pending', 'In Progress', 'Need Discussion', 'Delayed'] };
+    }
 
     // Date range filtering
     if (startDate || endDate) {

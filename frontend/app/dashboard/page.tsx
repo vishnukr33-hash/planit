@@ -56,6 +56,13 @@ export default function DashboardPage() {
   const kpis = data?.kpis || {}
   const basePath = '/dashboard/my-tasks'
 
+  // Build date range query string to pass to destination pages
+  const dateQuery = dateRange.startDate && dateRange.endDate
+    ? `&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
+    : ''
+
+  const navTo = (params: string) => router.push(`${basePath}?${params}${dateQuery}`)
+
   const trendDays = dateRange.startDate && dateRange.endDate
     ? eachDayOfInterval({ start: parseISO(dateRange.startDate), end: parseISO(dateRange.endDate) }).map(d => format(d, 'yyyy-MM-dd'))
     : Array.from({ length: 7 }, (_, i) => format(subDays(new Date(), 6 - i), 'yyyy-MM-dd'))
@@ -75,7 +82,7 @@ export default function DashboardPage() {
     if (elements.length > 0) {
       const pieRouteMap: Record<string, string> = { Done: 'status=Done', 'In Progress': 'status=In+Progress', Pending: 'status=Pending', 'Need Discussion': 'status=Need+Discussion', Delayed: 'status=Delayed' }
       const param = pieRouteMap[pieLabels[elements[0].index]]
-      if (param) router.push(basePath + '?' + param)
+      if (param) navTo(param)
     }
   }
 
@@ -93,11 +100,11 @@ export default function DashboardPage() {
         <div className="card p-4"><DateFilter onChange={setDateRange} defaultMode="month" /></div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-          <KPICard label="Open Tasks" value={kpis.open || 0} icon="📂" color="bg-blue-50 dark:bg-blue-900/20" onClick={() => router.push(basePath)} />
-          <KPICard label="In Progress" value={kpis.inProgress || 0} icon="🔄" color="bg-indigo-50 dark:bg-indigo-900/20" onClick={() => router.push(basePath + '?status=In+Progress')} />
-          <KPICard label="Need Discussion" value={kpis.needDiscussion || 0} icon="💬" color="bg-purple-50 dark:bg-purple-900/20" onClick={() => router.push(basePath + '?status=Need+Discussion')} />
-          <KPICard label="Completed" value={kpis.completed || 0} icon="✅" color="bg-green-50 dark:bg-green-900/20" onClick={() => router.push(basePath + '?status=Done')} />
-          <KPICard label="Overdue" value={kpis.overdue || 0} icon="⚠️" color="bg-red-50 dark:bg-red-900/20" onClick={() => router.push(basePath + '?filter=overdue')} />
+          <KPICard label="Open Tasks" value={kpis.open || 0} icon="📂" color="bg-blue-50 dark:bg-blue-900/20" onClick={() => navTo('filter=open')} />
+          <KPICard label="In Progress" value={kpis.inProgress || 0} icon="🔄" color="bg-indigo-50 dark:bg-indigo-900/20" onClick={() => navTo('status=In+Progress')} />
+          <KPICard label="Need Discussion" value={kpis.needDiscussion || 0} icon="💬" color="bg-purple-50 dark:bg-purple-900/20" onClick={() => navTo('status=Need+Discussion')} />
+          <KPICard label="Completed" value={kpis.completed || 0} icon="✅" color="bg-green-50 dark:bg-green-900/20" onClick={() => navTo('status=Done')} />
+          <KPICard label="Overdue" value={kpis.overdue || 0} icon="⚠️" color="bg-red-50 dark:bg-red-900/20" onClick={() => navTo('filter=overdue')} />
           <KPICard label="Productivity" value={`${kpis.productivity || 0}%`} icon="📊" color="bg-emerald-50 dark:bg-emerald-900/20" />
         </div>
 
