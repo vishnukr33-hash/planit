@@ -49,7 +49,7 @@ export default function DashboardPage() {
       ...(dateRange.startDate ? { startDate: dateRange.startDate } : {}),
       ...(dateRange.endDate ? { endDate: dateRange.endDate } : {}),
     }).then((r) => r.data),
-    refetchInterval: 60000,
+    refetchInterval: 300000, // 5 minutes
     retry: 2,
   })
 

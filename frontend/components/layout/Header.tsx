@@ -18,7 +18,8 @@ export default function Header({ title }: { title?: string }) {
   const { data: reminders } = useQuery({
     queryKey: ['reminders'],
     queryFn: () => getReminders().then(r => r.data),
-    refetchInterval: 60000,
+    refetchInterval: 300000, // 5 minutes
+    staleTime: 120000,
   })
 
   // Build notification items from reminders

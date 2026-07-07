@@ -178,3 +178,12 @@ taskSchema.pre('save', function (next) {
 
 module.exports =
   mongoose.models.Task || mongoose.model('Task', taskSchema);
+
+// Add indexes for faster queries
+if (!mongoose.models.Task) {
+  taskSchema.index({ assignedTo: 1, isDeleted: 1, createdAt: -1 });
+  taskSchema.index({ assignedBy: 1, isDeleted: 1 });
+  taskSchema.index({ status: 1, isDeleted: 1 });
+  taskSchema.index({ dueDate: 1, status: 1 });
+  taskSchema.index({ isRecurring: 1, recurrenceActive: 1, nextOccurrence: 1 });
+}
