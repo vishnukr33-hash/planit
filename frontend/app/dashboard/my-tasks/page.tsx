@@ -18,8 +18,18 @@ export default function MyTasksPage() {
   const [showModal, setShowModal] = useState(false)
   const [viewTask, setViewTask] = useState<any>(null)
 
-  // Date range state
+  // Date range state — only apply by default if no navigation filters
+  const hasNavFilter = !!(searchParams.get('status') || searchParams.get('filter'))
   const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({ startDate: '', endDate: '' })
+
+  const handleDateChange = (range: { startDate: string; endDate: string }) => {
+    // Only apply date range if no status/filter from dashboard navigation
+    if (!filters.status && !filters.filter) {
+      setDateRange(range)
+    } else {
+      setDateRange({ startDate: '', endDate: '' })
+    }
+  }
 
   // Pre-apply filters from dashboard KPI navigation
   const [filters, setFilters] = useState({
@@ -95,6 +105,8 @@ export default function MyTasksPage() {
 
   const clearAllFilters = () => {
     setFilters({ status: '', category: '', priority: '', search: '', filter: '' })
+    // Re-enable date filter after clearing
+    setDateRange({ startDate: '', endDate: '' })
   }
 
   return (
@@ -102,7 +114,7 @@ export default function MyTasksPage() {
       <div className="space-y-4">
         {/* Date Filter */}
         <div className="card p-4">
-          <DateFilter onChange={setDateRange} defaultMode="month" />
+          <DateFilter onChange={handleDateChange} defaultMode={hasNavFilter ? 'month' : 'month'} />
         </div>
 
         {/* Active filter banner */}
