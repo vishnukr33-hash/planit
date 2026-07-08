@@ -82,12 +82,10 @@ export default function MyTasksPage() {
   if (filters.scope === 'dashboard') {
     queryParams.scope = 'dashboard'
   } else {
-    // My Tasks page: restrict by role
+    // My Tasks page: restrict by role — but always include shared tasks assigned to user
     if (user?.role !== 'admin') {
       queryParams.assignedTo = user?._id
-      if (user?.role !== 'head' && user?.role !== 'teamlead') {
-        queryParams.isTeamTask = false
-      }
+      // Don't restrict isTeamTask — shared tasks are isTeamTask=true but should show in My Tasks
     }
   }
 

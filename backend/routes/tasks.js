@@ -166,16 +166,20 @@ router.get('/', protect, async (req, res) => {
           { assignedBy: req.user._id, isTeamTask: true }
         ];
       } else {
-        // My Tasks: tasks assigned TO this teamlead BY self OR by their Head (parent)
+        // My Tasks: tasks assigned TO this teamlead BY self, Head (parent), OR shared tasks
         query.assignedTo = req.user._id;
         if (req.user.parentId) {
-          query.assignedBy = { $in: [req.user._id, req.user.parentId] };
+          // Include: self-assigned, assigned by Head, OR shared tasks (isShared=true)
+          query.$or = [
+            { assignedBy: req.user._id },
+            { assignedBy: req.user.parentId },
+            { isShared: true }
+          ];
         }
-        // If no parent, show all tasks assigned to them (fallback)
       }
 
     } else {
-      // User: My Tasks = tasks assigned to this user (by anyone)
+      // User: My Tasks = all tasks assigned to this user (including shared tasks)
       query.assignedTo = req.user._id;
     }
 
