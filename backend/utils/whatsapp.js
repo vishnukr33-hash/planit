@@ -7,8 +7,8 @@ const TEMPLATE_URL = 'https://api.gupshup.io/wa/api/v1/template/msg';
 
 // Gupshup Template IDs (use Gupshup template ID, NOT Facebook template ID)
 const TEMPLATE_NEW_TASK = process.env.WHATSAPP_TEMPLATE_NEW_TASK || 'e4fe8bc8-bb0a-4cfe-8f4c-de7136339a9c';
-const TEMPLATE_TASK_PENDING = process.env.WHATSAPP_TEMPLATE_TASK_PENDING || 'e4fe8bc8-bb0a-4cfe-8f4c-de7136339a9c';
-const TEMPLATE_TASK_LATE = process.env.WHATSAPP_TEMPLATE_TASK_LATE || 'e4fe8bc8-bb0a-4cfe-8f4c-de7136339a9c';
+const TEMPLATE_TASK_PENDING = process.env.WHATSAPP_TEMPLATE_TASK_PENDING || '58ddef52-ed02-4d65-9be1-5845e93ca1';
+const TEMPLATE_TASK_LATE = process.env.WHATSAPP_TEMPLATE_TASK_LATE || 'b8e43c52-e05a-4f83-b782-6953326e59de';
 
 function normalizePhone(phone) {
   if (!phone) return null;
