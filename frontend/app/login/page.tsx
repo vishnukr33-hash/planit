@@ -31,21 +31,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-800 to-blue-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
+        {/* Logo — text only, no icon */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg overflow-hidden">
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="64" height="64" rx="16" fill="#1e3a5f"/>
-              <circle cx="32" cy="28" r="14" stroke="#3b82f6" strokeWidth="3" fill="none"/>
-              <path d="M32 16v12l5 5" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round"/>
-              <path d="M24 26l6 6 10-10" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M12 26h6M12 34h7M12 42h5" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round"/>
-              <circle cx="48" cy="18" r="5" fill="#10b981"/>
-              <path d="M46 18l2 2 3-3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <h1 className="text-3xl font-bold text-white"><span style={{color:'#93c5fd'}}>TVS</span> <span style={{color:'#4ade80'}}>DOT</span></h1>
-          <p className="text-blue-200 mt-1">— No More FOMO —</p>
+          <h1 className="text-4xl font-bold text-white"><span style={{color:'#93c5fd'}}>TVS</span> <span style={{color:'#4ade80'}}>D<span className="inline-block relative" style={{width:'28px', height:'28px', verticalAlign:'middle'}}><svg viewBox="0 0 20 20" style={{width:'100%', height:'100%'}}><circle cx="10" cy="10" r="9" fill="#22c55e"/><path d="M6 10.5l3 3 5.5-5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></span>T</span></h1>
+          <p className="text-blue-200 mt-2 tracking-wider">— No More FOMO —</p>
         </div>
 
         <div className="card p-8 shadow-2xl">
