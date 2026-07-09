@@ -51,6 +51,9 @@ export default function TaskModal({ task, onClose, defaultAssignTo, isTeamTask }
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks'] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      qc.invalidateQueries({ queryKey: ['team-productivity'] })
+      qc.invalidateQueries({ queryKey: ['reminders'] })
+      qc.invalidateQueries({ queryKey: ['chats'] })
       toast.success(isEdit ? 'Task updated' : 'Task created')
       onClose()
     },

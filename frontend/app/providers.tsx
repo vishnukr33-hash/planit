@@ -10,8 +10,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 60000,        // 1 minute — don't refetch if data is fresh
-      refetchOnWindowFocus: false, // disable refetch on tab switch (reduces noise)
+      staleTime: 30000,         // 30 seconds — data stays fresh for 30s
+      gcTime: 300000,           // 5 minutes cache
+      refetchOnWindowFocus: true, // refresh when user comes back to tab
     }
   }
 })
@@ -19,6 +20,16 @@ const queryClient = new QueryClient({
 function SocketProvider({ children }: { children: React.ReactNode }) {
   const { user, token, showChatPopup } = useAuthStore()
   const socketRef = useRef<Socket | null>(null)
+
+  // Keep backend alive — ping every 4 minutes to prevent Render cold starts
+  useEffect(() => {
+    if (!user || !token) return
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api', '')
+    const ping = () => fetch(`${apiUrl}/health`).catch(() => {})
+    ping() // immediate ping on login
+    const interval = setInterval(ping, 4 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [user, token])
 
   useEffect(() => {
     if (!user || !token) return
@@ -46,6 +57,7 @@ function SocketProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
       queryClient.invalidateQueries({ queryKey: ['reminders'] })
       queryClient.invalidateQueries({ queryKey: ['team-productivity'] })
+      queryClient.invalidateQueries({ queryKey: ['chats'] })
     })
 
     socket.on('task:updated', () => {
@@ -53,6 +65,7 @@ function SocketProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
       queryClient.invalidateQueries({ queryKey: ['reminders'] })
       queryClient.invalidateQueries({ queryKey: ['team-productivity'] })
+      queryClient.invalidateQueries({ queryKey: ['chats'] })
     })
 
     // Chat message received — show popup and refresh queries

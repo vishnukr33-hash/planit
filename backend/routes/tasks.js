@@ -284,8 +284,8 @@ router.post('/', protect, async (req, res) => {
         await task.populate('sharedWith', 'name username employeeCode avatar');
 
         req.io?.to(task.assignedTo._id.toString()).emit('task:new', task);
-
-        if (task.assignedTo.phone) notifyTaskAssigned(task.assignedTo, task, req.user.name).catch(() => {});
+        // Also notify the assigner so their Team Tasks refreshes
+        req.io?.to(req.user._id.toString()).emit('task:new', task);
         if (task.assignedTo.email) {
           sendEmail({
             to: task.assignedTo.email,
@@ -330,6 +330,10 @@ router.post('/', protect, async (req, res) => {
     await task.populate('assignedBy', 'name username avatar');
 
     req.io?.to(task.assignedTo._id.toString()).emit('task:new', task);
+    // Also notify the assigner so their Team Tasks/Dashboard refreshes immediately
+    if (task.assignedTo._id.toString() !== req.user._id.toString()) {
+      req.io?.to(req.user._id.toString()).emit('task:new', task);
+    }
 
     if (task.assignedTo._id.toString() !== req.user._id.toString()) {
       const dueStr = task.dueDate ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'No due date';
