@@ -55,16 +55,34 @@ async function sendGupshupTemplate(phone, templateId, params) {
 
 // === NOTIFICATION FUNCTIONS ===
 
+// new_task template has 1 param: task title or message
 async function notifyTaskAssigned(user, task, assignedByName) {
-  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, []);
+  const dueStr = task.dueDate
+    ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+    : 'No due date';
+  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, [
+    `${task.title} | Due: ${dueStr} | Priority: ${task.priority} | By: ${assignedByName}`
+  ]);
 }
 
+// task_pending template has 1 param: reminder message
 async function notifyTaskPending(user, task) {
-  return sendGupshupTemplate(user.phone, TEMPLATE_TASK_PENDING, []);
+  const dueStr = task.dueDate
+    ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+    : 'N/A';
+  return sendGupshupTemplate(user.phone, TEMPLATE_TASK_PENDING, [
+    `${task.title} | Due: ${dueStr} | Status: ${task.status}`
+  ]);
 }
 
+// task_late template has 1 param: overdue message
 async function notifyTaskLate(user, task) {
-  return sendGupshupTemplate(user.phone, TEMPLATE_TASK_LATE, []);
+  const dueStr = task.dueDate
+    ? new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+    : 'N/A';
+  return sendGupshupTemplate(user.phone, TEMPLATE_TASK_LATE, [
+    `${task.title} | Was Due: ${dueStr} | Status: ${task.status}`
+  ]);
 }
 
 async function notifyReminder(user, task, type) {
@@ -78,15 +96,20 @@ async function notifyReminder(user, task, type) {
 }
 
 async function notifyStatusUpdate(user, task, updatedByName) {
-  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, []);
+  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, [
+    `${task.title} | Status: ${task.status} | Updated by: ${updatedByName}`
+  ]);
 }
 
 async function notifyChatMessage(user, task, senderName, messageText) {
-  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, []);
+  const preview = messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText;
+  return sendGupshupTemplate(user.phone, TEMPLATE_NEW_TASK, [
+    `${task.title} | Message from ${senderName}: ${preview}`
+  ]);
 }
 
 async function testWhatsApp(phone) {
-  return sendGupshupTemplate(phone, TEMPLATE_NEW_TASK, []);
+  return sendGupshupTemplate(phone, TEMPLATE_NEW_TASK, ['TVS DOT - WhatsApp test successful!']);
 }
 
 module.exports = {
