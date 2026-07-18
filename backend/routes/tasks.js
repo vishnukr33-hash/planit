@@ -114,7 +114,12 @@ router.get('/chats/list', protect, async (req, res) => {
       .populate('assignedBy', 'name username avatar')
       .populate('comments.user', 'name username avatar')
       .sort({ updatedAt: -1 })
-      .limit(50);
+      .limit(30)  // Reduced from 50
+      .lean()
+      .then(tasks => tasks.map(t => ({
+        ...t,
+        comments: t.comments?.slice(-5) || [] // Only last 5 comments for preview
+      })));
 
     res.json({ tasks });
   } catch (err) {

@@ -21,15 +21,13 @@ export default function ChatsPage() {
   })
 
   const handleOpenChat = async (task: any) => {
-    try {
-      const res = await getTask(task._id)
+    // Show immediately with cached data
+    setSelectedTask(task)
+    markChatRead(task._id)
+    // Refresh in background
+    getTask(task._id).then(res => {
       setSelectedTask(res.data)
-      // Mark as read with current timestamp
-      markChatRead(task._id)
-    } catch {
-      setSelectedTask(task)
-      markChatRead(task._id)
-    }
+    }).catch(() => {})
   }
 
   // Count unread messages per task based on last-read timestamp

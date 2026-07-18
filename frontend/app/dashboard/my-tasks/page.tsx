@@ -67,11 +67,10 @@ export default function MyTasksPage() {
   // Open task detail if taskId in URL (from notification click)
   useEffect(() => {
     const taskId = searchParams.get('taskId')
-    if (taskId) {
-      getTask(taskId).then(res => {
-        setViewTask(res.data)
-      }).catch(() => {})
-    }
+    if (!taskId) return
+    getTask(taskId).then(res => {
+      setViewTask(res.data)
+    }).catch(() => {})
   }, [searchParams])
 
   const queryParams: Record<string, any> = {

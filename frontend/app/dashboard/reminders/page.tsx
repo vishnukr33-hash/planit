@@ -83,14 +83,12 @@ export default function RemindersPage() {
   })
 
   const handleTaskClick = async (task: any) => {
-    try {
-      // Fetch full task with comments populated
-      const res = await getTask(task._id)
+    // Show immediately with cached data (no wait)
+    setSelectedTask(task)
+    // Refresh in background to get latest comments
+    getTask(task._id).then(res => {
       setSelectedTask(res.data)
-    } catch {
-      // Fallback to the task data we already have
-      setSelectedTask(task)
-    }
+    }).catch(() => {})
   }
 
   if (isLoading) return (
