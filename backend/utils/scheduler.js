@@ -1,7 +1,8 @@
 const cron = require('node-cron');
 const Task = require('../models/Task');
+const User = require('../models/User');
 const { sendEmail } = require('./email');
-const { notifyTaskPending, notifyTaskLate } = require('./whatsapp');
+const { notifyTaskPending, notifyTaskLate, notifyMyTaskReminder, notifyTeamTaskReminder } = require('./whatsapp');
 
 // Keep Atlas alive - ping every 4 minutes
 cron.schedule('*/4 * * * *', async () => {
@@ -175,8 +176,104 @@ cron.schedule('0 2 * * *', async () => {
 });
 
 /**
+ * DAILY MY TASK REMINDER — 9:00 AM IST (3:30 UTC)
+ * Sends my_task_reminder WhatsApp to every active user with due-today or overdue tasks
+ */
+cron.schedule('30 3 * * *', async () => {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const users = await User.find({ status: 'active', phone: { $ne: '' } });
+
+    let sentCount = 0;
+    for (const user of users) {
+      const [dueTodayTasks, overdueTasks] = await Promise.all([
+        Task.find({
+          assignedTo: user._id,
+          dueDate: { $gte: todayStart, $lte: todayEnd },
+          status: { $nin: ['Done'] },
+          isDeleted: { $ne: true },
+        }).select('title dueDate status priority').lean(),
+
+        Task.find({
+          assignedTo: user._id,
+          dueDate: { $lt: todayStart },
+          status: { $nin: ['Done'] },
+          isDeleted: { $ne: true },
+        }).select('title dueDate status priority').lean(),
+      ]);
+
+      if (dueTodayTasks.length === 0 && overdueTasks.length === 0) continue;
+
+      if (user.phone) {
+        await notifyMyTaskReminder(user, dueTodayTasks, overdueTasks).catch(() => {});
+        sentCount++;
+      }
+    }
+    console.log(`[Scheduler] my_task_reminder: Sent to ${sentCount} users`);
+  } catch (err) {
+    console.error('Scheduler error (my_task_reminder):', err);
+  }
+});
+
+/**
+ * DAILY TEAM TASK REMINDER — 9:00 AM IST (3:30 UTC)
+ * Sends team_task_reminder WhatsApp to Head and TeamLead about their team's due/overdue tasks
+ */
+cron.schedule('30 3 * * *', async () => {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const managers = await User.find({
+      role: { $in: ['head', 'teamlead'] },
+      status: 'active',
+      phone: { $ne: '' },
+    });
+
+    let sentCount = 0;
+    for (const manager of managers) {
+      const subordinates = await User.find({ parentId: manager._id, status: 'active' }).select('_id');
+      const subIds = subordinates.map(s => s._id);
+
+      if (subIds.length === 0) continue;
+
+      const [dueTodayTasks, overdueTasks] = await Promise.all([
+        Task.find({
+          assignedTo: { $in: subIds },
+          dueDate: { $gte: todayStart, $lte: todayEnd },
+          status: { $nin: ['Done'] },
+          isDeleted: { $ne: true },
+        }).populate('assignedTo', 'name').select('title dueDate status priority assignedTo').lean(),
+
+        Task.find({
+          assignedTo: { $in: subIds },
+          dueDate: { $lt: todayStart },
+          status: { $nin: ['Done'] },
+          isDeleted: { $ne: true },
+        }).populate('assignedTo', 'name').select('title dueDate status priority assignedTo').lean(),
+      ]);
+
+      if (dueTodayTasks.length === 0 && overdueTasks.length === 0) continue;
+
+      if (manager.phone) {
+        await notifyTeamTaskReminder(manager, dueTodayTasks, overdueTasks).catch(() => {});
+        sentCount++;
+      }
+    }
+    console.log(`[Scheduler] team_task_reminder: Sent to ${sentCount} managers`);
+  } catch (err) {
+    console.error('Scheduler error (team_task_reminder):', err);
+  }
+});
+
+/**
  * RECURRING TASKS: Create next month's task
- * Runs daily at 12:01 AM — checks for recurring tasks whose nextOccurrence has arrived
  */
 cron.schedule('1 0 * * *', async () => {
   try {
