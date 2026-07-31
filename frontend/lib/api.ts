@@ -1,8 +1,8 @@
 import axios from 'axios'
 
-const API_BASE = typeof window !== 'undefined' 
-  ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api')
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api')
+// In production (Vercel), use relative /api path so Next.js rewrites proxy to Oracle Cloud
+// In local dev, use the direct backend URL
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
 
 const api = axios.create({ baseURL: API_BASE })
 
