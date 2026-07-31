@@ -40,6 +40,20 @@ export default function TaskModal({ task, onClose, defaultAssignTo, isTeamTask }
     sharedWith: task?.sharedWith?.map((u: any) => u._id || u) || [] as string[],
   })
 
+  // Track if user wants to postpone the due date
+  const [showPostpone, setShowPostpone] = useState(false)
+
+  // When status changes to Done, auto-set completedAt to now (sent in payload)
+  // When status changes away from Done, restore original due date
+  const handleStatusChange = (newStatus: string) => {
+    setForm(f => ({ ...f, status: newStatus }))
+    if (newStatus === 'Done') {
+      setShowPostpone(false)
+    }
+  }
+
+  const isDoneStatus = form.status === 'Done'
+
   const { data: usersData } = useQuery({
     queryKey: ['subordinates'],
     queryFn: () => getSubordinates().then(r => r.data),
@@ -73,10 +87,25 @@ export default function TaskModal({ task, onClose, defaultAssignTo, isTeamTask }
     e.preventDefault()
     if (statusOnlyEdit) { mutation.mutate({ status: form.status }); return }
     if (!form.title.trim()) return toast.error('Title is required')
-    if (!form.dueDate) return toast.error('Due Date is required')
-    if (!form.dueTime) return toast.error('Due Time is required')
+
+    // When status is Done, auto-use current date/time — no manual input needed
+    // When postponing, require the new date
+    if (!isDoneStatus) {
+      if (showPostpone && !form.dueDate) return toast.error('Please select a postponed due date')
+      if (!showPostpone && !form.dueDate) return toast.error('Due Date is required')
+      if (!form.dueTime) return toast.error('Due Time is required')
+    }
+
     if (isTeamTask && !form.isShared && !form.assignedTo) return toast.error('Please select a team member')
     if (form.isShared && form.sharedWith.length === 0) return toast.error('Please select at least one team member for shared task')
+
+    // Build due date: Done = now, Postpone = new date, else original
+    let dueDateISO: string
+    if (isDoneStatus) {
+      dueDateISO = new Date().toISOString() // auto-capture current date & time
+    } else {
+      dueDateISO = new Date(form.dueDate + 'T' + form.dueTime).toISOString()
+    }
 
     const payload: any = {
       title: form.title,
@@ -84,7 +113,7 @@ export default function TaskModal({ task, onClose, defaultAssignTo, isTeamTask }
       status: form.status,
       category: form.category,
       priority: form.priority,
-      dueDate: new Date(form.dueDate + 'T' + form.dueTime).toISOString(),
+      dueDate: dueDateISO,
       isRecurring: form.isRecurring || undefined,
     }
     if (form.isShared) {
@@ -131,7 +160,7 @@ export default function TaskModal({ task, onClose, defaultAssignTo, isTeamTask }
             <div>
               <label className="label">Status</label>
               {isEdit
-                ? <select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>{statusOptions.map(s => <option key={s}>{s}</option>)}</select>
+                ? <select className="input" value={form.status} onChange={e => handleStatusChange(e.target.value)}>{statusOptions.map(s => <option key={s}>{s}</option>)}</select>
                 : <input className="input bg-slate-50 dark:bg-slate-700/50" value="Pending" readOnly />}
             </div>
             <div>
@@ -151,17 +180,68 @@ export default function TaskModal({ task, onClose, defaultAssignTo, isTeamTask }
                 : <select className="input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>}
             </div>
             <div>
-              <label className="label">Due Date {!statusOnlyEdit && '*'}</label>
+              <label className="label">Due Date {!statusOnlyEdit && !isDoneStatus && '*'}</label>
               {statusOnlyEdit
                 ? <p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.dueDate || '—'}</p>
-                : <input type="date" className="input" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} min={format(new Date(), 'yyyy-MM-dd')} required />}
+                : isDoneStatus
+                ? <p className="input bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm">✅ Auto: {format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
+                : <input type="date" className="input" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} required />}
             </div>
           </div>
 
-          {/* Due Time */}
-          {!statusOnlyEdit
-            ? <div><label className="label">Due Time *</label><input type="time" className="input" value={form.dueTime} onChange={e => setForm(f => ({ ...f, dueTime: e.target.value }))} min={form.dueDate === format(new Date(), 'yyyy-MM-dd') ? format(new Date(), 'HH:mm') : undefined} required /></div>
-            : <div><label className="label">Due Time</label><p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.dueTime || '—'}</p></div>}
+          {/* Due Time — hidden when Done (auto-captured), shown otherwise */}
+          {statusOnlyEdit
+            ? <div><label className="label">Due Time</label><p className="input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed">{form.dueTime || '—'}</p></div>
+            : isDoneStatus
+            ? null
+            : <div><label className="label">Due Time *</label><input type="time" className="input" value={form.dueTime} onChange={e => setForm(f => ({ ...f, dueTime: e.target.value }))} required /></div>}
+
+          {/* Postpone Due Date — only shown when status is NOT Done and editing */}
+          {isEdit && !statusOnlyEdit && !isDoneStatus && (
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <button type="button"
+                onClick={() => {
+                  setShowPostpone(p => !p)
+                  if (!showPostpone) {
+                    // Pre-fill with tomorrow's date
+                    const tomorrow = new Date()
+                    tomorrow.setDate(tomorrow.getDate() + 1)
+                    setForm(f => ({ ...f, dueDate: format(tomorrow, 'yyyy-MM-dd') }))
+                  } else {
+                    // Restore original due date
+                    setForm(f => ({ ...f, dueDate: task?.dueDate ? task.dueDate.split('T')[0] : f.dueDate }))
+                  }
+                }}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <div>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">📅 Postpone Due Date</p>
+                  <p className="text-xs text-slate-400">Extend the deadline to a future date</p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full font-medium ${showPostpone ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+                  {showPostpone ? 'ON' : 'OFF'}
+                </span>
+              </button>
+              {showPostpone && (
+                <div className="px-4 pb-4 pt-1 grid grid-cols-2 gap-3 bg-orange-50/50 dark:bg-orange-900/10 border-t border-slate-200 dark:border-slate-700">
+                  <div>
+                    <label className="label text-orange-700 dark:text-orange-400">New Due Date *</label>
+                    <input type="date" className="input border-orange-300 dark:border-orange-700"
+                      value={form.dueDate}
+                      min={format(new Date(new Date().setDate(new Date().getDate() + 1)), 'yyyy-MM-dd')}
+                      onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
+                      required />
+                  </div>
+                  <div>
+                    <label className="label text-orange-700 dark:text-orange-400">New Due Time *</label>
+                    <input type="time" className="input border-orange-300 dark:border-orange-700"
+                      value={form.dueTime}
+                      onChange={e => setForm(f => ({ ...f, dueTime: e.target.value }))}
+                      required />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Assignment section */}
           {canAssign && !statusOnlyEdit && (
