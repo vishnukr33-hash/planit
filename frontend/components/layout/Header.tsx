@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getReminders } from '@/lib/api'
 import { format } from 'date-fns'
 import clsx from 'clsx'
+import { playDueTodaySound, playOverdueSound } from '@/lib/sounds'
 
 export default function Header({ title }: { title?: string }) {
   const { user, logout, toggleTheme, theme, setSidebarOpen, sidebarOpen, readNotifications, markNotificationRead, markAllNotificationsRead } = useAuthStore()
@@ -31,6 +32,22 @@ export default function Header({ title }: { title?: string }) {
 
   // Count unread
   const unreadCount = notifications.filter(n => !readNotifications.includes(n.id)).length
+
+  // Play sound when new unread overdue/due-today notifications arrive
+  const prevUnreadRef = useRef<string[]>([])
+  useEffect(() => {
+    if (!reminders) return
+    const currentIds = notifications.map(n => n.id)
+    const newIds = currentIds.filter(id => !prevUnreadRef.current.includes(id) && !readNotifications.includes(id))
+
+    if (newIds.length > 0) {
+      const hasOverdue = newIds.some(id => id.startsWith('overdue-'))
+      const hasDueToday = newIds.some(id => id.startsWith('today-'))
+      if (hasOverdue) playOverdueSound()
+      else if (hasDueToday) playDueTodaySound()
+    }
+    prevUnreadRef.current = currentIds
+  }, [reminders]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close dropdown on outside click
   useEffect(() => {

@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useAuthStore } from '@/lib/store'
 import ChatPopup from '@/components/ChatPopup'
+import { playNewTaskSound, playChatSound } from '@/lib/sounds'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,6 +59,7 @@ function SocketProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['reminders'] })
       queryClient.invalidateQueries({ queryKey: ['team-productivity'] })
       queryClient.invalidateQueries({ queryKey: ['chats'] })
+      playNewTaskSound()
     })
 
     socket.on('task:updated', () => {
@@ -76,6 +78,7 @@ function SocketProvider({ children }: { children: React.ReactNode }) {
 
       // Show chat popup if the message is from someone else
       if (data && data.comment && data.comment.user?._id !== user._id) {
+        playChatSound()
         showChatPopup({
           taskId: data.taskId,
           taskTitle: data.taskTitle || 'Task',
