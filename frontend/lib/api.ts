@@ -1,8 +1,9 @@
 import axios from 'axios'
 
-// In production (Vercel), use relative /api path so Next.js rewrites proxy to Oracle Cloud
-// In local dev, use the direct backend URL
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
+// Always use relative /api — Next.js rewrites handle routing to the backend
+// This works for both local dev (next.config.js rewrites to localhost:5000)
+// and production Vercel (rewrites to Oracle Cloud via BACKEND_URL env var)
+const API_BASE = '/api'
 
 const api = axios.create({ baseURL: API_BASE })
 
