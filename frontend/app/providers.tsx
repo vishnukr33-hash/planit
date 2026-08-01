@@ -25,20 +25,21 @@ function SocketProvider({ children }: { children: React.ReactNode }) {
   // Keep backend alive — ping every 4 minutes to prevent Render cold starts
   useEffect(() => {
     if (!user || !token) return
-    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api', '')
-    const ping = () => fetch(`${apiUrl}/health`).catch(() => {})
-    ping() // immediate ping on login
+    const ping = () => fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } }).catch(() => {})
+    ping()
     const interval = setInterval(ping, 4 * 60 * 1000)
     return () => clearInterval(interval)
   }, [user, token])
 
   useEffect(() => {
     if (!user || !token) return
-    // Don't reconnect if already connected
     if (socketRef.current?.connected) return
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
-    const socketUrl = apiUrl.replace('/api', '')
+    // Socket must connect directly to backend (not through Vercel proxy)
+    // Use env var if set, else fallback to Oracle Cloud IP
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
+                      process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 
+                      'http://129.154.240.177:5000'
 
     const socket = io(socketUrl, {
       transports: ['websocket'],
