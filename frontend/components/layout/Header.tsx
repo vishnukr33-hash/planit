@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getReminders } from '@/lib/api'
 import { format } from 'date-fns'
 import clsx from 'clsx'
-import { playDueTodaySound, playOverdueSound } from '@/lib/sounds'
+import { playDueTodaySound, playOverdueSound, showNativeNotification } from '@/lib/sounds'
 
 export default function Header({ title }: { title?: string }) {
   const { user, logout, toggleTheme, theme, setSidebarOpen, sidebarOpen, readNotifications, markNotificationRead, markAllNotificationsRead } = useAuthStore()
@@ -50,8 +50,13 @@ export default function Header({ title }: { title?: string }) {
     if (newIds.length > 0) {
       const hasOverdue = newIds.some(id => id.startsWith('overdue-'))
       const hasDueToday = newIds.some(id => id.startsWith('today-'))
-      if (hasOverdue) playOverdueSound()
-      else if (hasDueToday) playDueTodaySound()
+      if (hasOverdue) {
+        playOverdueSound()
+        showNativeNotification('🚨 Overdue Tasks', `You have ${newIds.filter(id => id.startsWith('overdue-')).length} overdue task(s)`, '/dashboard/my-tasks?filter=overdue')
+      } else if (hasDueToday) {
+        playDueTodaySound()
+        showNativeNotification('📅 Due Today', `You have ${newIds.filter(id => id.startsWith('today-')).length} task(s) due today`, '/dashboard/my-tasks')
+      }
     }
     prevUnreadRef.current = currentIds
   }, [reminders]) // eslint-disable-line react-hooks/exhaustive-deps

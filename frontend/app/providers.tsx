@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useAuthStore } from '@/lib/store'
 import ChatPopup from '@/components/ChatPopup'
-import { playNewTaskSound, playChatSound } from '@/lib/sounds'
+import { playNewTaskSound, playChatSound, showNativeNotification, requestNotificationPermission } from '@/lib/sounds'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,6 +21,12 @@ const queryClient = new QueryClient({
 function SocketProvider({ children }: { children: React.ReactNode }) {
   const { user, token, showChatPopup } = useAuthStore()
   const socketRef = useRef<Socket | null>(null)
+
+  // Request notification permission for mobile native notifications
+  useEffect(() => {
+    if (!user || !token) return
+    requestNotificationPermission()
+  }, [user, token])
 
   // Keep backend alive — ping every 4 minutes to prevent Render cold starts
   useEffect(() => {
@@ -54,13 +60,18 @@ function SocketProvider({ children }: { children: React.ReactNode }) {
     })
 
     // Auto-refresh on task events
-    socket.on('task:new', () => {
+    socket.on('task:new', (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
       queryClient.invalidateQueries({ queryKey: ['reminders'] })
       queryClient.invalidateQueries({ queryKey: ['team-productivity'] })
       queryClient.invalidateQueries({ queryKey: ['chats'] })
       playNewTaskSound()
+      showNativeNotification(
+        '🆕 New Task Assigned',
+        data?.title ? `"${data.title}" has been assigned to you` : 'You have a new task',
+        '/dashboard/my-tasks'
+      )
     })
 
     socket.on('task:updated', () => {
@@ -77,9 +88,13 @@ function SocketProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['reminders'] })
       queryClient.invalidateQueries({ queryKey: ['chats'] })
 
-      // Show chat popup if the message is from someone else
       if (data && data.comment && data.comment.user?._id !== user._id) {
         playChatSound()
+        showNativeNotification(
+          `💬 ${data.comment.user?.name || 'Someone'}`,
+          `${data.taskTitle || 'Task'}: ${data.comment.text || ''}`,
+          `/dashboard/my-tasks?taskId=${data.taskId}`
+        )
         showChatPopup({
           taskId: data.taskId,
           taskTitle: data.taskTitle || 'Task',
