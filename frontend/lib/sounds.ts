@@ -1,66 +1,61 @@
 /**
  * In-app notification sounds
- * Uses Web Audio API + MP3 fallback
- * Handles browser autoplay policy by unlocking on first user interaction
+ * Plays sound ONLY on real events: new task, chat message, due today, overdue
+ * Does NOT play on page load or user clicks
  */
 
-let unlocked = false
 let audioCtx: AudioContext | null = null
 let audioBuffer: AudioBuffer | null = null
-let loadError = false
+let bufferLoaded = false
 
-// Unlock audio on first user interaction
-if (typeof window !== 'undefined') {
-  const unlock = () => {
-    if (unlocked) return
-    unlocked = true
-    initAudio()
-    window.removeEventListener('click', unlock)
-    window.removeEventListener('keydown', unlock)
-    window.removeEventListener('touchstart', unlock)
-  }
-  window.addEventListener('click', unlock)
-  window.addEventListener('keydown', unlock)
-  window.addEventListener('touchstart', unlock)
-}
+async function ensureReady(): Promise<boolean> {
+  if (typeof window === 'undefined') return false
 
-function initAudio() {
   try {
-    if (audioCtx) return
-    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    // Create audio context on demand
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
 
-    // Load the MP3 into a buffer for instant reliable playback
-    fetch('/sounds/notification.mp3')
-      .then(r => r.arrayBuffer())
-      .then(buf => audioCtx!.decodeAudioData(buf))
-      .then(decoded => { audioBuffer = decoded })
-      .catch(() => { loadError = true })
+    // Resume if suspended
+    if (audioCtx.state === 'suspended') {
+      await audioCtx.resume()
+    }
+
+    // Load buffer once
+    if (!bufferLoaded) {
+      bufferLoaded = true // prevent multiple fetches
+      const response = await fetch('/sounds/notification.mp3')
+      const arrayBuffer = await response.arrayBuffer()
+      audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
+    }
+
+    return !!audioBuffer
   } catch {
-    loadError = true
+    return false
   }
 }
 
-function playSound(volume = 0.7) {
-  // Method 1: AudioContext buffer (most reliable)
-  if (audioCtx && audioBuffer) {
+async function playSound(volume = 0.7) {
+  const ready = await ensureReady()
+  if (!ready || !audioCtx || !audioBuffer) {
+    // Final fallback: HTMLAudio
     try {
-      if (audioCtx.state === 'suspended') audioCtx.resume()
-      const source = audioCtx.createBufferSource()
-      const gainNode = audioCtx.createGain()
-      source.buffer = audioBuffer
-      gainNode.gain.value = volume
-      source.connect(gainNode)
-      gainNode.connect(audioCtx.destination)
-      source.start(0)
-      return
-    } catch { /* fall through */ }
+      const a = new Audio('/sounds/notification.mp3')
+      a.volume = volume
+      await a.play()
+    } catch { /* silent */ }
+    return
   }
 
-  // Method 2: HTMLAudio fallback
   try {
-    const a = new Audio('/sounds/notification.mp3')
-    a.volume = volume
-    a.play().catch(() => {})
+    const source = audioCtx.createBufferSource()
+    const gainNode = audioCtx.createGain()
+    source.buffer = audioBuffer
+    gainNode.gain.value = volume
+    source.connect(gainNode)
+    gainNode.connect(audioCtx.destination)
+    source.start(0)
   } catch { /* silent */ }
 }
 

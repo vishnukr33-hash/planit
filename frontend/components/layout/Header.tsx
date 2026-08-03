@@ -33,13 +33,20 @@ export default function Header({ title }: { title?: string }) {
   // Count unread
   const unreadCount = notifications.filter(n => !readNotifications.includes(n.id)).length
 
-  // Play sound when new unread overdue/due-today notifications arrive
-  const prevUnreadRef = useRef<string[]>([])
+  // Play sound ONLY when genuinely new notifications arrive after initial load
+  const prevUnreadRef = useRef<string[] | null>(null) // null = not initialized yet
   useEffect(() => {
     if (!reminders) return
     const currentIds = notifications.map(n => n.id)
-    const newIds = currentIds.filter(id => !prevUnreadRef.current.includes(id) && !readNotifications.includes(id))
 
+    // First load — just record the IDs, don't play sound
+    if (prevUnreadRef.current === null) {
+      prevUnreadRef.current = currentIds
+      return
+    }
+
+    // Only play for IDs that weren't there before (genuinely new)
+    const newIds = currentIds.filter(id => !prevUnreadRef.current!.includes(id))
     if (newIds.length > 0) {
       const hasOverdue = newIds.some(id => id.startsWith('overdue-'))
       const hasDueToday = newIds.some(id => id.startsWith('today-'))
