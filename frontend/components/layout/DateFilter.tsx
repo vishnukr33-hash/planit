@@ -1,33 +1,23 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 
 interface DateFilterProps {
   onChange: (range: { startDate: string; endDate: string }) => void
-  defaultMode?: 'month' | 'custom'
+  defaultMode?: 'all' | 'month' | 'custom'
 }
 
-export default function DateFilter({ onChange, defaultMode = 'month' }: DateFilterProps) {
-  const [mode, setMode] = useState<'month' | 'custom'>(defaultMode)
+export default function DateFilter({ onChange, defaultMode = 'all' }: DateFilterProps) {
+  const [mode, setMode] = useState<'all' | 'month' | 'custom'>(defaultMode)
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'))
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
 
-  // Initialize with current month on mount
-  useMemo(() => {
-    if (defaultMode === 'month') {
-      const date = new Date(selectedMonth + '-01')
-      onChange({
-        startDate: format(startOfMonth(date), 'yyyy-MM-dd'),
-        endDate: format(endOfMonth(date), 'yyyy-MM-dd'),
-      })
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const handleModeChange = (newMode: 'month' | 'custom') => {
+  const handleModeChange = (newMode: 'all' | 'month' | 'custom') => {
     setMode(newMode)
-    if (newMode === 'month') {
+    if (newMode === 'all') {
+      onChange({ startDate: '', endDate: '' })
+    } else if (newMode === 'month') {
       const date = new Date(selectedMonth + '-01')
       onChange({
         startDate: format(startOfMonth(date), 'yyyy-MM-dd'),
@@ -36,6 +26,8 @@ export default function DateFilter({ onChange, defaultMode = 'month' }: DateFilt
     } else {
       if (customStart && customEnd) {
         onChange({ startDate: customStart, endDate: customEnd })
+      } else {
+        onChange({ startDate: '', endDate: '' })
       }
     }
   }
@@ -59,6 +51,16 @@ export default function DateFilter({ onChange, defaultMode = 'month' }: DateFilt
     <div className="flex flex-wrap items-center gap-3">
       {/* Mode toggle */}
       <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden text-sm">
+        <button
+          onClick={() => handleModeChange('all')}
+          className={`px-3 py-1.5 transition-colors ${
+            mode === 'all'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+          }`}
+        >
+          📋 All Tasks
+        </button>
         <button
           onClick={() => handleModeChange('month')}
           className={`px-3 py-1.5 transition-colors ${

@@ -18,7 +18,7 @@ export default function MyTasksPage() {
   const [showModal, setShowModal] = useState(false)
   const [viewTask, setViewTask] = useState<any>(null)
 
-  // Date range state — read from URL params if navigating from dashboard, else use date picker
+  // Date range state — read from URL params if navigating from dashboard, else empty (show all)
   const urlStartDate = searchParams.get('startDate') || ''
   const urlEndDate = searchParams.get('endDate') || ''
   const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({
@@ -141,7 +141,7 @@ export default function MyTasksPage() {
       <div className="space-y-4">
         {/* Date Filter */}
         <div className="card p-4">
-          <DateFilter onChange={handleDateChange} defaultMode="month" />
+          <DateFilter onChange={handleDateChange} defaultMode="all" />
         </div>
 
         {/* Active filter banner */}
