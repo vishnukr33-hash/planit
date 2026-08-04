@@ -116,49 +116,44 @@ async function testWhatsApp(phone) {
 
 /**
  * my_task_reminder — sent to individual user
- * Params: userName, dueToday count, overdue count, task summary list
+ * Template: "Hey, You've got {{1}} tasks | 🔥 Due Today: {{2}} | ⚠️ Overdue: {{3}}"
+ * Params: totalCount, dueTodayCount, overdueCount
  */
 async function notifyMyTaskReminder(user, dueTodayTasks, overdueTasks) {
   const dueTodayCount = dueTodayTasks.length;
   const overdueCount = overdueTasks.length;
-
-  // Build a short task list summary (max 5 tasks)
-  const allTasks = [
-    ...dueTodayTasks.map(t => `• ${t.title} [Due Today]`),
-    ...overdueTasks.map(t => `• ${t.title} [Overdue]`)
-  ].slice(0, 5);
-
-  const taskList = allTasks.length > 0 ? allTasks.join('\n') : 'No pending tasks';
+  const totalCount = dueTodayCount + overdueCount;
 
   return sendGupshupTemplate(user.phone, TEMPLATE_MY_TASK_REMINDER, [
-    user.name,
+    String(totalCount),
     String(dueTodayCount),
     String(overdueCount),
-    taskList
   ]);
 }
 
 /**
  * team_task_reminder — sent to Head / TeamLead
- * Params: managerName, dueToday count, overdue count, task summary list
+ * Template: "{{1}} tasks | Due Today: {{2}} | Overdue: {{3}} | Who's Got What: {{4}}"
+ * Params: totalCount, dueTodayCount, overdueCount, memberTaskList
  */
 async function notifyTeamTaskReminder(manager, dueTodayTasks, overdueTasks) {
   const dueTodayCount = dueTodayTasks.length;
   const overdueCount = overdueTasks.length;
+  const totalCount = dueTodayCount + overdueCount;
 
-  // Build a short task list summary (max 5 tasks, include assignee name)
+  // Build member-wise task list (max 5 lines)
   const allTasks = [
-    ...dueTodayTasks.map(t => `• ${t.title} → ${t.assignedTo?.name || 'N/A'} [Due Today]`),
-    ...overdueTasks.map(t => `• ${t.title} → ${t.assignedTo?.name || 'N/A'} [Overdue]`)
+    ...dueTodayTasks.map(t => `• ${t.assignedTo?.name || 'N/A'}: ${t.title} [Due Today]`),
+    ...overdueTasks.map(t => `• ${t.assignedTo?.name || 'N/A'}: ${t.title} [Overdue]`)
   ].slice(0, 5);
 
-  const taskList = allTasks.length > 0 ? allTasks.join('\n') : 'No pending tasks';
+  const memberList = allTasks.length > 0 ? allTasks.join('\n') : 'No pending tasks';
 
   return sendGupshupTemplate(manager.phone, TEMPLATE_TEAM_TASK_REMINDER, [
-    manager.name,
+    String(totalCount),
     String(dueTodayCount),
     String(overdueCount),
-    taskList
+    memberList,
   ]);
 }
 
