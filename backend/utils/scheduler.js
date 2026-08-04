@@ -222,6 +222,9 @@ cron.schedule('30 3 * * *', async () => {
 /**
  * DAILY TEAM TASK REMINDER — 9:00 AM IST (3:30 UTC)
  * Sends team_task_reminder WhatsApp to Head and TeamLead about their team's due/overdue tasks
+ * Logic:
+ *   - Head: sees ALL tasks assigned by Head to anyone in their hierarchy
+ *   - TeamLead: sees tasks assigned BY Head (or anyone) TO their direct users
  */
 cron.schedule('30 3 * * *', async () => {
   try {
@@ -238,33 +241,60 @@ cron.schedule('30 3 * * *', async () => {
 
     let sentCount = 0;
     for (const manager of managers) {
-      const subordinates = await User.find({ parentId: manager._id, status: 'active' }).select('_id');
-      const subIds = subordinates.map(s => s._id);
 
-      if (subIds.length === 0) continue;
+      let dueTodayTasks = [], overdueTasks = [];
 
-      const [dueTodayTasks, overdueTasks] = await Promise.all([
-        Task.find({
-          assignedTo: { $in: subIds },
-          dueDate: { $gte: todayStart, $lte: todayEnd },
-          status: { $nin: ['Done'] },
-          isDeleted: { $ne: true },
-        }).populate('assignedTo', 'name').select('title dueDate status priority assignedTo').lean(),
+      if (manager.role === 'head') {
+        // Head sees all tasks assigned BY the head to others (not self-assigned)
+        const [dt, ot] = await Promise.all([
+          Task.find({
+            assignedBy: manager._id,
+            assignedTo: { $ne: manager._id },
+            dueDate: { $gte: todayStart, $lte: todayEnd },
+            status: { $nin: ['Done'] },
+            isDeleted: { $ne: true },
+          }).populate('assignedTo', 'name').select('title dueDate status priority assignedTo').lean(),
 
-        Task.find({
-          assignedTo: { $in: subIds },
-          dueDate: { $lt: todayStart },
-          status: { $nin: ['Done'] },
-          isDeleted: { $ne: true },
-        }).populate('assignedTo', 'name').select('title dueDate status priority assignedTo').lean(),
-      ]);
+          Task.find({
+            assignedBy: manager._id,
+            assignedTo: { $ne: manager._id },
+            dueDate: { $lt: todayStart },
+            status: { $nin: ['Done'] },
+            isDeleted: { $ne: true },
+          }).populate('assignedTo', 'name').select('title dueDate status priority assignedTo').lean(),
+        ]);
+        dueTodayTasks = dt;
+        overdueTasks = ot;
+
+      } else if (manager.role === 'teamlead') {
+        // TeamLead sees tasks assigned TO their direct subordinates (by anyone including head)
+        const subordinates = await User.find({ parentId: manager._id, status: 'active' }).select('_id');
+        const subIds = subordinates.map(s => s._id);
+        if (subIds.length === 0) continue;
+
+        const [dt, ot] = await Promise.all([
+          Task.find({
+            assignedTo: { $in: subIds },
+            dueDate: { $gte: todayStart, $lte: todayEnd },
+            status: { $nin: ['Done'] },
+            isDeleted: { $ne: true },
+          }).populate('assignedTo', 'name').select('title dueDate status priority assignedTo').lean(),
+
+          Task.find({
+            assignedTo: { $in: subIds },
+            dueDate: { $lt: todayStart },
+            status: { $nin: ['Done'] },
+            isDeleted: { $ne: true },
+          }).populate('assignedTo', 'name').select('title dueDate status priority assignedTo').lean(),
+        ]);
+        dueTodayTasks = dt;
+        overdueTasks = ot;
+      }
 
       if (dueTodayTasks.length === 0 && overdueTasks.length === 0) continue;
 
-      if (manager.phone) {
-        await notifyTeamTaskReminder(manager, dueTodayTasks, overdueTasks).catch(() => {});
-        sentCount++;
-      }
+      await notifyTeamTaskReminder(manager, dueTodayTasks, overdueTasks).catch(() => {});
+      sentCount++;
     }
     console.log(`[Scheduler] team_task_reminder: Sent to ${sentCount} managers`);
   } catch (err) {

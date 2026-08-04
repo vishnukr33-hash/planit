@@ -40,18 +40,27 @@ async function run() {
   console.log('\n=== TESTING team_task_reminder ===');
   const managers = await User.find({ role: { $in: ['head', 'teamlead'] }, status: 'active', phone: { $ne: '' } });
   for (const manager of managers) {
-    const subordinates = await User.find({ parentId: manager._id, status: 'active' }).select('_id');
-    const subIds = subordinates.map(s => s._id);
-    console.log(`${manager.name} (${manager.role}) | Subordinates: ${subIds.length}`);
+    let dueTodayTasks = [], overdueTasks = [];
 
-    if (subIds.length === 0) { console.log('  → SKIP - no subordinates'); continue; }
+    if (manager.role === 'head') {
+      // Head: tasks assigned BY head to others
+      [dueTodayTasks, overdueTasks] = await Promise.all([
+        Task.find({ assignedBy: manager._id, assignedTo: { $ne: manager._id }, dueDate: { $gte: todayStart, $lte: todayEnd }, status: { $nin: ['Done'] }, isDeleted: { $ne: true } }).populate('assignedTo', 'name').lean(),
+        Task.find({ assignedBy: manager._id, assignedTo: { $ne: manager._id }, dueDate: { $lt: todayStart }, status: { $nin: ['Done'] }, isDeleted: { $ne: true } }).populate('assignedTo', 'name').lean(),
+      ]);
+    } else {
+      // TeamLead: tasks assigned TO their direct subordinates
+      const subordinates = await User.find({ parentId: manager._id, status: 'active' }).select('_id');
+      const subIds = subordinates.map(s => s._id);
+      if (subIds.length === 0) { console.log(`${manager.name} (${manager.role}) → SKIP - no subordinates`); continue; }
+      [dueTodayTasks, overdueTasks] = await Promise.all([
+        Task.find({ assignedTo: { $in: subIds }, dueDate: { $gte: todayStart, $lte: todayEnd }, status: { $nin: ['Done'] }, isDeleted: { $ne: true } }).populate('assignedTo', 'name').lean(),
+        Task.find({ assignedTo: { $in: subIds }, dueDate: { $lt: todayStart }, status: { $nin: ['Done'] }, isDeleted: { $ne: true } }).populate('assignedTo', 'name').lean(),
+      ]);
+    }
 
-    const [dueTodayTasks, overdueTasks] = await Promise.all([
-      Task.find({ assignedTo: { $in: subIds }, dueDate: { $gte: todayStart, $lte: todayEnd }, status: { $nin: ['Done'] }, isDeleted: { $ne: true } }).populate('assignedTo', 'name').lean(),
-      Task.find({ assignedTo: { $in: subIds }, dueDate: { $lt: todayStart }, status: { $nin: ['Done'] }, isDeleted: { $ne: true } }).populate('assignedTo', 'name').lean(),
-    ]);
-
-    console.log(`  Due Today: ${dueTodayTasks.length} | Overdue: ${overdueTasks.length}`);
+    console.log(`${manager.name} (${manager.role}) | Due Today: ${dueTodayTasks.length} | Overdue: ${overdueTasks.length}`);
+    if (dueTodayTasks.length === 0 && overdueTasks.length === 0) { console.log('  → SKIP - no tasks'); continue; }
     const result = await notifyTeamTaskReminder(manager, dueTodayTasks, overdueTasks).catch(e => ({ error: e.message }));
     console.log(`  → Sent:`, JSON.stringify(result));
   }
