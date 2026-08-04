@@ -9,10 +9,10 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
 interface UserForm {
-  employeeCode: string; name: string; email: string; username: string; password: string; phone: string; role: string; status: string
+  employeeCode: string; name: string; email: string; username: string; password: string; phone: string; role: string; status: string; parentId: string;
 }
 
-const emptyForm: UserForm = { employeeCode: '', name: '', email: '', username: '', password: '', phone: '', role: '', status: 'active' }
+const emptyForm: UserForm = { employeeCode: '', name: '', email: '', username: '', password: '', phone: '', role: '', status: 'active', parentId: '' }
 
 export default function UsersPage() {
   const { user } = useAuthStore()
@@ -38,6 +38,13 @@ export default function UsersPage() {
     queryFn: () => getUsers({ search, limit: 50 }).then(r => r.data),
   })
 
+  // Get all heads and teamleads for the "Reports To" dropdown
+  const { data: managersData } = useQuery({
+    queryKey: ['users-managers'],
+    queryFn: () => getUsers({ limit: 100 }).then(r => r.data),
+    enabled: showModal,
+  })
+
   const createMutation = useMutation({
     mutationFn: (data: object) => editUser ? updateUser(editUser._id, data) : createUser(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); toast.success(editUser ? 'User updated' : 'User created'); closeModal() },
@@ -60,7 +67,7 @@ export default function UsersPage() {
     onError: (err: any) => toast.error(err.response?.data?.message || 'Error'),
   })
 
-  const openEdit = (u: any) => { setEditUser(u); setForm({ employeeCode: u.employeeCode, name: u.name, email: u.email, username: u.username, password: '', phone: u.phone || '', role: u.role || 'user', status: u.status }); setShowModal(true) }
+  const openEdit = (u: any) => { setEditUser(u); setForm({ employeeCode: u.employeeCode, name: u.name, email: u.email, username: u.username, password: '', phone: u.phone || '', role: u.role || 'user', status: u.status, parentId: u.parentId?._id || u.parentId || '' }); setShowModal(true) }
   const closeModal = () => { setShowModal(false); setEditUser(null); setForm({ ...emptyForm, role: allowedRoles[0] || 'user' }) }
 
   return (
@@ -175,6 +182,17 @@ export default function UsersPage() {
                   <label className="label">{editUser ? 'New Password' : 'Password *'}</label>
                   <input className="input" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required={!editUser} />
                 </div>
+              </div>
+              <div>
+                <label className="label">Reports To (Manager)</label>
+                <select className="input" value={form.parentId} onChange={e => setForm(f => ({ ...f, parentId: e.target.value }))}>
+                  <option value="">— Select Manager —</option>
+                  {(managersData?.users || [])
+                    .filter((u: any) => ['head', 'teamlead'].includes(u.role) && u._id !== editUser?._id)
+                    .map((u: any) => (
+                      <option key={u._id} value={u._id}>{u.name} ({u.role === 'teamlead' ? 'Team Lead' : 'Head'})</option>
+                    ))}
+                </select>
               </div>
               <div>
                 <label className="label">Role *</label>
