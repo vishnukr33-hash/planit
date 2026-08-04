@@ -113,7 +113,11 @@ router.post('/', protect, async (req, res) => {
     const user = await User.create(userData);
     res.status(201).json(user);
   } catch (err) {
-    if (err.code === 11000) return res.status(400).json({ message: 'Employee code, email or username already exists' });
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern || {})[0] || 'field';
+      const fieldLabel = field === 'employeeCode' ? 'Employee Code' : field === 'email' ? 'Email' : field === 'username' ? 'Username' : field;
+      return res.status(400).json({ message: `${fieldLabel} already exists. Please use a different one.` });
+    }
     res.status(500).json({ message: err.message });
   }
 });
@@ -160,11 +164,27 @@ router.patch('/:id/reset-password', protect, async (req, res) => {
   }
 });
 
-// Delete user
+// Delete user — permanent delete so employeeCode/email/username can be reused
 router.delete('/:id', protect, async (req, res) => {
   try {
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) return res.status(404).json({ message: 'User not found' });
+
+    // Only admin or head can delete
+    if (!['admin', 'head'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Only admin or head can delete users' });
+    }
+
+    // Permanently delete — frees up employeeCode, email, username for reuse
     await User.findByIdAndDelete(req.params.id);
-    res.json({ message: 'User deleted' });
+
+    // Also reassign any subordinates to deleted user's parent (avoid orphans)
+    await User.updateMany(
+      { parentId: req.params.id },
+      { $set: { parentId: targetUser.parentId || null } }
+    );
+
+    res.json({ message: 'User deleted. Employee code and credentials are now available for reuse.' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

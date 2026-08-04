@@ -21,7 +21,7 @@ export default function UsersPage() {
 
   // Determine which roles this user can create
   const allowedRoles = user?.role === 'admin' ? ['head', 'teamlead', 'user']
-    : user?.role === 'head' ? ['teamlead']
+    : user?.role === 'head' ? ['teamlead', 'user']
     : user?.role === 'teamlead' ? ['user']
     : []
   const [search, setSearch] = useState('')
