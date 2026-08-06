@@ -31,7 +31,7 @@ export default function UsersPage() {
   const [resetModal, setResetModal] = useState<any>(null)
   const [newPass, setNewPass] = useState('')
 
-  if (user?.role === 'user') { router.push('/dashboard'); return null }
+  if (!user || user?.role === 'user') { router.push('/dashboard'); return null }
 
   const { data, isLoading } = useQuery({
     queryKey: ['users', search],
@@ -62,8 +62,8 @@ export default function UsersPage() {
   })
 
   const resetMutation = useMutation({
-    mutationFn: () => resetUserPassword(resetModal._id, newPass),
-    onSuccess: () => { toast.success('Password reset'); setResetModal(null); setNewPass('') },
+    mutationFn: ({ id, password }: { id: string; password: string }) => resetUserPassword(id, password),
+    onSuccess: () => { toast.success('Password reset successfully'); setResetModal(null); setNewPass('') },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Error'),
   })
 
@@ -230,7 +230,7 @@ export default function UsersPage() {
               </div>
               <div className="flex gap-3">
                 <button onClick={() => { setResetModal(null); setNewPass('') }} className="btn-secondary flex-1">Cancel</button>
-                <button onClick={() => resetMutation.mutate()} disabled={newPass.length < 6 || resetMutation.isPending} className="btn-primary flex-1">
+                <button onClick={() => resetMutation.mutate({ id: resetModal._id, password: newPass })} disabled={newPass.length < 6 || resetMutation.isPending} className="btn-primary flex-1">
                   {resetMutation.isPending ? 'Resetting...' : 'Reset'}
                 </button>
               </div>
