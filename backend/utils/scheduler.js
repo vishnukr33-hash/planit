@@ -16,11 +16,9 @@ cron.schedule('*/4 * * * *', async () => {
 cron.schedule('30 3 * * *', async () => {
   // 3:30 UTC = 9:00 AM IST
   try {
-    const tomorrow = new Date();
-    tomorrow.setHours(0, 0, 0, 0);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const dayAfter = new Date(tomorrow);
-    dayAfter.setDate(dayAfter.getDate() + 1);
+    const nowIST = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
+    const tomorrow = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate() + 1, 0, 0, 0) - (5.5 * 60 * 60 * 1000));
+    const dayAfter = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate() + 2, 0, 0, 0) - (5.5 * 60 * 60 * 1000));
 
     const tasks = await Task.find({
       dueDate: { $gte: tomorrow, $lt: dayAfter },
@@ -66,12 +64,12 @@ cron.schedule('30 3 * * *', async () => {
 cron.schedule('30 3 * * *', async () => {
   // 3:30 UTC = 9:00 AM IST (runs alongside N-1 day but different query)
   try {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
+    const nowIST = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
+    const todayStartIST = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate(), 0, 0, 0) - (5.5 * 60 * 60 * 1000));
 
     // Find all overdue tasks (due date in the past, not done)
     const tasks = await Task.find({
-      dueDate: { $lt: now },
+      dueDate: { $lt: todayStartIST },
       status: { $nin: ['Done'] },
       isDeleted: { $ne: true },
     }).populate('assignedTo', 'name email phone');
@@ -181,10 +179,10 @@ cron.schedule('0 2 * * *', async () => {
  */
 cron.schedule('30 3 * * *', async () => {
   try {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    // Use IST date (UTC+5:30) for due-today calculation
+    const nowIST = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
+    const todayStart = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate(), 0, 0, 0) - (5.5 * 60 * 60 * 1000));
+    const todayEnd = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate(), 23, 59, 59) - (5.5 * 60 * 60 * 1000));
 
     const users = await User.find({ status: 'active', phone: { $ne: '' } });
 
@@ -222,16 +220,13 @@ cron.schedule('30 3 * * *', async () => {
 /**
  * DAILY TEAM TASK REMINDER — 9:00 AM IST (3:30 UTC)
  * Sends team_task_reminder WhatsApp to Head and TeamLead about their team's due/overdue tasks
- * Logic:
- *   - Head: sees ALL tasks assigned by Head to anyone in their hierarchy
- *   - TeamLead: sees tasks assigned BY Head (or anyone) TO their direct users
  */
 cron.schedule('30 3 * * *', async () => {
   try {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    // Use IST date (UTC+5:30) for due-today calculation
+    const nowIST = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
+    const todayStart = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate(), 0, 0, 0) - (5.5 * 60 * 60 * 1000));
+    const todayEnd = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate(), 23, 59, 59) - (5.5 * 60 * 60 * 1000));
 
     const managers = await User.find({
       role: { $in: ['head', 'teamlead'] },
