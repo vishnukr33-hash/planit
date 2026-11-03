@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/store'
 import { useQuery } from '@tanstack/react-query'
 import { getChats } from '@/lib/api'
 import clsx from 'clsx'
+import TvsDotLogo from '@/components/layout/TvsDotLogo'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: '⊞' },
@@ -62,12 +63,21 @@ export default function Sidebar() {
           <Link href="/dashboard" className="block hover:opacity-80 transition-opacity">
           {sidebarOpen && (
             <div>
-              <span className="font-bold text-lg tracking-tight"><span className="text-white">TVS</span> <span className="text-green-400 font-extrabold">D<span className="inline-block relative w-[16px] h-[16px] align-middle mx-[1px]"><svg viewBox="0 0 20 20" className="w-full h-full"><circle cx="10" cy="10" r="9" fill="#22c55e"/><path d="M6 10.5l3 3 5.5-5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></span>T</span></span>
-              <p className="text-[9px] text-white -mt-0.5 tracking-wider">— No More FOMO —</p>
+              <TvsDotLogo size="sm" />
             </div>
           )}
           {!sidebarOpen && (
-            <span className="font-bold text-sm text-green-400">D<span className="inline-block relative w-[12px] h-[12px] align-middle"><svg viewBox="0 0 20 20" className="w-full h-full"><circle cx="10" cy="10" r="9" fill="#22c55e"/><path d="M6 10.5l3 3 5.5-5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></span>T</span>
+            <svg width="32" height="32" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" aria-label="TVS DOT">
+              <defs>
+                <clipPath id="speedLinesIcon">
+                  {Array.from({ length: 14 }).map((_, i) => (
+                    <rect key={i} x="0" y={i * 5.14} width="72" height="2.8" />
+                  ))}
+                </clipPath>
+              </defs>
+              <text x="2" y="58" fontFamily="Arial Black, Impact, sans-serif" fontWeight="900" fontStyle="italic" fontSize="62" fill="#7fff00" clipPath="url(#speedLinesIcon)">D</text>
+              <text x="2" y="58" fontFamily="Arial Black, Impact, sans-serif" fontWeight="900" fontStyle="italic" fontSize="62" fill="none" stroke="#7fff00" strokeWidth="0.6" strokeOpacity="0.35">D</text>
+            </svg>
           )}
           </Link>
         </div>

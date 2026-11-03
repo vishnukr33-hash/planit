@@ -6,6 +6,7 @@ import { login } from '@/lib/api'
 import { useAuthStore } from '@/lib/store'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
+import TvsDotLogo from '@/components/layout/TvsDotLogo'
 
 export default function LoginPage() {
   const [form, setForm] = useState({ username: '', password: '' })
@@ -31,10 +32,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-800 to-blue-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo — text only, no icon */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white"><span style={{color:'#93c5fd'}}>TVS</span> <span style={{color:'#4ade80'}}>D<span className="inline-block relative" style={{width:'28px', height:'28px', verticalAlign:'middle'}}><svg viewBox="0 0 20 20" style={{width:'100%', height:'100%'}}><circle cx="10" cy="10" r="9" fill="#22c55e"/><path d="M6 10.5l3 3 5.5-5.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></span>T</span></h1>
-          <p className="text-blue-200 mt-2 tracking-wider">— No More FOMO —</p>
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <TvsDotLogo size="lg" />
         </div>
 
         <div className="card p-8 shadow-2xl">
